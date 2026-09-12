@@ -1,0 +1,14 @@
+{
+  "name": "omnidegen-agent",
+  "module": "src/index.ts",
+  "type": "module",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "groq-sdk": "latest",
+    "telegraf": "latest",
+    "viem": "latest"
+  }
+}
