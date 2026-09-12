@@ -9,7 +9,8 @@ export function validateHedgeRequest(userWallet: string, target: string): boolea
 }
 
 const vaultAbi = [
-  { type: "function", name: "executeHedge", inputs: [{ name: "userWallet", type: "address" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "executeHedge", inputs: [{ name: "user", type: "address" }, { name: "amount", type: "uint256" }, { name: "minOut", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
+  { type: "function", name: "bnbBalance", inputs: [{ name: "", type: "address" }], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" },
 ] as const;
 
 export async function triggerHedgeTransaction(userWallet: string) {
@@ -22,6 +23,9 @@ export async function triggerHedgeTransaction(userWallet: string) {
   const vault = process.env.VAULT_CONTRACT_ADDRESS as `0x${string}`;
   const publicClient = createPublicClient({ chain: bscTestnet, transport: http(process.env.RPC_URL) });
   const walletClient = createWalletClient({ account, chain: bscTestnet, transport: http(process.env.RPC_URL) });
-  const { request } = await publicClient.simulateContract({ account, address: vault, abi: vaultAbi, functionName: "executeHedge", args: [userWallet as `0x${string}`] });
+  // hedge seluruh saldo BNB user di vault (amount_pct dipetakan di kontrak nanti)
+  const bal = await publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "bnbBalance", args: [userWallet as `0x${string}`] }) as bigint;
+  if (bal === 0n) throw new Error("no deposit");
+  const { request } = await publicClient.simulateContract({ account, address: vault, abi: vaultAbi, functionName: "executeHedge", args: [userWallet as `0x${string}`, bal, 0n] });
   return walletClient.writeContract(request);
 }

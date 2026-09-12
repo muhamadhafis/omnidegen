@@ -30,7 +30,7 @@ contract Deploy is Script {
         // seed likuiditas 0.005 BNB : 2.5 mUSDC (hemat faucet, rasio 1:500)
         usdc.mint(backend, 2.5 ether);
         usdc.approve(ROUTER, 2.5 ether);
-        IRouterSeed(ROUTER).addLiquidityETH{value: 0.005 ether}(address(usdc), 2.5 ether, 0, 0, backend, block.timestamp);
+        IRouterSeed(ROUTER).addLiquidityETH{value: 0.005 ether}(address(usdc), 2.5 ether, 0, 0, backend, block.timestamp + 1 hours);
 
         vm.stopBroadcast();
         console.log("MockUSDC:", address(usdc));
