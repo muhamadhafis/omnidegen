@@ -22,6 +22,7 @@ describe("engine", () => {
     expect(routeIntent({ type: "stop_loss", asset: "BNB", target: "USDC", price: 450, amountPct: 100 })).toBe("monitor");
     expect(routeIntent({ type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 })).toBe("execute_now");
     expect(routeIntent({ type: "defi_batch", asset: "USDT", target: "BNB", price: 0, amountPct: 50 })).toBe("execute_now");
+    expect(routeIntent({ type: "ask", asset: "BNB", target: "BNB", price: 0, amountPct: 100 } as any)).toBe("info");
     setWallet("u1", W);
     expect(getWallet("u1")).toBe(W);
   });

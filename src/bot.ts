@@ -1,12 +1,13 @@
 import { parseUserIntent, type ParsedIntent } from "./ai";
 import { getActiveIntents, getLastIntent, saveIntent } from "./db";
 import { getVaultBalances, triggerHedgeTransaction, validateHedgeRequest } from "./web3";
-import { fetchPrice, setMockPrice } from "./loop";
+import { fetchPrice, setMockPrice, failHint } from "./loop";
 import { formatEther } from "viem";
 
-// pure + testable: routing 3 use-case
-export function routeIntent(p: ParsedIntent): "monitor" | "execute_now" | "reject" {
+// pure + testable: routing 4 use-case (ask = tanya saldo, jawab tanpa eksekusi)
+export function routeIntent(p: ParsedIntent): "monitor" | "execute_now" | "info" | "reject" {
   if (!p || !p.asset || !p.target) return "reject";
+  if (p.type === "ask") return "info";
   return p.type === "stop_loss" || p.type === "take_profit" ? "monitor" : "execute_now";
 }
 
@@ -64,16 +65,31 @@ async function handleText(uid: string, text: string, reply: (t: string) => Promi
   const parsed = await parseUserIntent(t);
   if (!parsed) return reply("❌ Tidak paham. Sebut token + harga. Cth: 'kumpulin receh jadi BNB'.");
   const route = routeIntent(parsed);
+  if (route === "info") return answerInfo(uid, wallet, reply);
   if (route === "monitor") {
     saveIntent({ userId: uid, userWallet: wallet, intentType: parsed.type, asset: parsed.asset, target: parsed.target, price: parsed.price, amountPct: parsed.amountPct });
     return reply(`✅ ${parsed.type} aktif: ${parsed.asset}->${parsed.target} @ $${parsed.price}. Pantau 24/7.`);
   }
   if (route === "execute_now") {
     if (!validateHedgeRequest(wallet, parsed.target)) return reply("❌ Target/wallet tidak diizinkan (guardrail).");
-    const tx = await triggerHedgeTransaction(wallet).catch(() => null);
-    return reply(tx ? `✅ Batch ${parsed.type} dieksekusi.\nTx: ${tx}` : "❌ Eksekusi gagal.");
+    try {
+      const tx = await triggerHedgeTransaction(wallet);
+      return reply(tx ? `✅ Batch ${parsed.type} dieksekusi.\nTx: ${tx}` : "❌ Eksekusi gagal.");
+    } catch (e) {
+      return reply(`❌ Eksekusi gagal: ${failHint(e instanceof Error ? e.message : "")}`);
+    }
   }
   return reply("❌ Intent ditolak guardrail.");
+}
+
+async function answerInfo(uid: string, wallet: string, reply: (t: string) => Promise<unknown>) {
+  try {
+    const b = await getVaultBalances(wallet);
+    const mine = (getActiveIntents() as any[]).filter((i) => i.user_id === uid);
+    return reply(formatInfo(wallet, b.bnb, b.stable, mine, getLastIntent(uid)));
+  } catch {
+    return reply("❌ Gagal baca vault, coba lagi.");
+  }
 }
 
 let running = false;
@@ -98,13 +114,7 @@ async function poll() {
             await reply("Kirim alamat wallet 0x... dulu.");
             continue;
           }
-          try {
-            const b = await getVaultBalances(w);
-            const mine = (getActiveIntents() as any[]).filter((i) => i.user_id === uid);
-            await reply(formatInfo(w, b.bnb, b.stable, mine, getLastIntent(uid)));
-          } catch {
-            await reply("❌ Gagal baca vault, coba lagi.");
-          }
+          await answerInfo(uid, w, reply);
         } else if (msg.text.startsWith("/crash") || msg.text === "/price") {
           if (!isAdmin(uid)) {
             await reply("⛔ Khusus admin demo.");

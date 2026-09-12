@@ -13,14 +13,15 @@ export const GROQ_MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-20b";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY ?? "dummy" });
 
 const SYSTEM = `Ekstrak perintah user jadi JSON murni tanpa markdown.
-Schema: {"type":"stop_loss"|"take_profit"|"vacuum"|"defi_batch","asset":"BNB"|"USDC"|"USDT"|"DUST","target":"BNB"|"USDC"|"USDT","price":number,"amountPct":1-100}.
-turun/anjlok/jatuh->stop_loss, naik/profit->take_profit, receh/kumpulkan/claim->vacuum, sisanya multi-step->defi_batch. Default amountPct 100, price 0 jika tak ada.`;
+Schema: {"type":"stop_loss"|"take_profit"|"vacuum"|"defi_batch"|"ask","asset":"BNB"|"USDC"|"USDT"|"DUST","target":"BNB"|"USDC"|"USDT","price":number,"amountPct":1-100}.
+turun/anjlok/jatuh->stop_loss, naik/profit->take_profit, receh/kumpulkan/claim->vacuum, TANYA saldo/aset/portofolio/info (berapa, cek, lihat, tampilkan saldo)->ask, sisanya multi-step->defi_batch. Default amountPct 100, price 0 jika tak ada.`;
 
 // pure + testable: normalisasi + validasi hasil LLM
 export function parseIntentJson(raw: string): ParsedIntent | null {
   try {
     const j = JSON.parse(raw);
     if (!INTENT_TYPES.includes(j.type)) return null;
+    if (j.type === "ask") return { type: "ask", asset: "BNB", target: "BNB", price: 0, amountPct: 100 };
     const asset = String(j.asset ?? "").toUpperCase();
     const target = String(j.target ?? "").toUpperCase();
     if (!asset || !target) return null;

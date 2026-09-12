@@ -1,6 +1,6 @@
 import { Database } from "bun:sqlite";
 
-export const INTENT_TYPES = ["stop_loss", "take_profit", "vacuum", "defi_batch"] as const;
+export const INTENT_TYPES = ["stop_loss", "take_profit", "vacuum", "defi_batch", "ask"] as const;
 export type IntentType = (typeof INTENT_TYPES)[number];
 const ALLOWED_ASSETS = new Set(["BNB", "USDC", "USDT", "DUST"]);
 

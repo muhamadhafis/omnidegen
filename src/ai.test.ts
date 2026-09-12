@@ -10,6 +10,9 @@ describe("ai", () => {
     expect(parseIntentJson(JSON.stringify({ type: "vacuum", asset: "DUST", target: "BNB", amountPct: 999 }))).toBeNull();
     expect(parseIntentJson("bukan json")).toBeNull();
   });
+  test("parse ask tanpa syarat aset/harga", () => {
+    expect(parseIntentJson(JSON.stringify({ type: "ask" }))).toEqual({ type: "ask", asset: "BNB", target: "BNB", price: 0, amountPct: 100 });
+  });
   test("parseUserIntent dengan mock client", async () => {
     const fake: any = { chat: { completions: { create: async () => ({ choices: [{ message: { content: JSON.stringify({ type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 }) } }] }) } } };
     expect(await parseUserIntent("kumpulin receh", fake)).toEqual({ type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 });
