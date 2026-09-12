@@ -8,7 +8,6 @@
   },
   "dependencies": {
     "groq-sdk": "latest",
-    "telegraf": "latest",
     "viem": "latest"
   }
 }
