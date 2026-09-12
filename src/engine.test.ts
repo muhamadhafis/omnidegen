@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { shouldTrigger, tickOnce } from "./loop";
 import { validateHedgeRequest } from "./web3";
-import { routeIntent, setWallet, getWallet } from "./bot";
+import { routeIntent, setWallet, getWallet, parseCrash, isAdmin } from "./bot";
 import { createDb, saveIntent, getActiveIntents } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
@@ -24,6 +24,16 @@ describe("engine", () => {
     expect(routeIntent({ type: "defi_batch", asset: "USDT", target: "BNB", price: 0, amountPct: 50 })).toBe("execute_now");
     setWallet("u1", W);
     expect(getWallet("u1")).toBe(W);
+  });
+  test("admin crash command", () => {
+    expect(parseCrash("/crash 440")).toBe(440);
+    expect(parseCrash("/crash abc")).toBeNull();
+    expect(parseCrash("/crash -5")).toBeNull();
+    process.env.ADMIN_ID = "1";
+    expect(isAdmin("1")).toBe(true);
+    expect(isAdmin("2")).toBe(false);
+    delete process.env.ADMIN_ID;
+    expect(isAdmin("1")).toBe(false);
   });
   test("tickOnce end-to-end: crash mengeksekusi + notif", async () => {
     const conn = createDb();

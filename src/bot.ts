@@ -1,6 +1,7 @@
 import { parseUserIntent, type ParsedIntent } from "./ai";
 import { saveIntent } from "./db";
 import { triggerHedgeTransaction, validateHedgeRequest } from "./web3";
+import { fetchPrice, setMockPrice } from "./loop";
 
 // pure + testable: routing 3 use-case
 export function routeIntent(p: ParsedIntent): "monitor" | "execute_now" | "reject" {
@@ -11,6 +12,14 @@ export function routeIntent(p: ParsedIntent): "monitor" | "execute_now" | "rejec
 const wallets = new Map<string, string>(); // ponytail: in-memory, pindah ke kolom users kalau multi-instance
 export const setWallet = (uid: string, w: string) => void wallets.set(uid, w);
 export const getWallet = (uid: string) => wallets.get(uid);
+
+// admin demo terkontrol: /crash 440 | /price (hanya ADMIN_ID)
+export function parseCrash(text: string): number | null {
+  const m = text.trim().match(/^\/crash\s+(\d+(\.\d+)?)$/);
+  const p = m ? Number(m[1]) : NaN;
+  return p > 0 ? p : null;
+}
+export const isAdmin = (uid: string) => (process.env.ADMIN_ID ?? "") !== "" && uid === process.env.ADMIN_ID;
 
 const token = () => process.env.TELEGRAM_BOT_TOKEN ?? "dummy";
 const api = (m: string) => `https://api.telegram.org/bot${token()}/${m}`;
@@ -69,7 +78,23 @@ async function poll() {
         const reply = (t: string) => sendMessage(uid, t);
         const ctx: Ctx = { from: { id: msg.from.id }, message: { text: msg.text }, reply };
         if (msg.text.startsWith("/start")) await startHandler(ctx);
-        else await handleText(uid, msg.text, reply);
+        else if (msg.text.startsWith("/crash") || msg.text === "/price") {
+          if (!isAdmin(uid)) {
+            await reply("⛔ Khusus admin demo.");
+            continue;
+          }
+          if (msg.text === "/price") {
+            await reply(`BNB sekarang $${await fetchPrice()}`);
+            continue;
+          }
+          const p = parseCrash(msg.text);
+          if (p === null) {
+            await reply("Format: /crash 440");
+            continue;
+          }
+          setMockPrice(p);
+          await reply(`📉 Harga diset $${p}. Pantau rescue...`);
+        } else await handleText(uid, msg.text, reply);
       }
     } catch (e) {
       console.error("poll error:", (e as Error).message);
