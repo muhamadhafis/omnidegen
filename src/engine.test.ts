@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { shouldTrigger, tickOnce, failHint } from "./loop";
 import { validateHedgeRequest } from "./web3";
-import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo, statusLine } from "./bot";
+import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo, statusLine, setPending, getPending, clearPending } from "./bot";
 import { createDb, saveIntent, getActiveIntents } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
@@ -48,6 +48,14 @@ describe("engine", () => {
     expect(formatInfo(W, { walletBnb: 0n, bnb: 0n, stable: 0n }, [])).toContain("belum ada");
     expect(statusLine({ intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("gagal");
     expect(formatInfo(W, { walletBnb: 0n, bnb: 0n, stable: 0n }, [], { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("Terakhir");
+  });
+  test("pending konfirmasi instan", () => {
+    const p: any = { type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 };
+    expect(getPending("u1")).toBeUndefined();
+    setPending("u1", p);
+    expect(getPending("u1")).toEqual(p);
+    clearPending("u1");
+    expect(getPending("u1")).toBeUndefined();
   });
   test("tickOnce end-to-end: crash mengeksekusi + notif", async () => {
     const conn = createDb();

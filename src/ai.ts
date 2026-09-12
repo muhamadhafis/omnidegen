@@ -43,6 +43,7 @@ export async function parseUserIntent(text: string, client = groq): Promise<Pars
         { role: "user", content: text },
       ],
       model: GROQ_MODEL,
+      temperature: 0, // deterministik: kalimat sama -> JSON sama (uang bergerak, tak boleh lotre)
       response_format: { type: "json_object" },
     } as any);
     return parseIntentJson(r.choices[0]?.message?.content ?? "");

@@ -15,6 +15,12 @@ const wallets = new Map<string, string>(); // ponytail: in-memory, pindah ke kol
 export const setWallet = (uid: string, w: string) => void wallets.set(uid, w);
 export const getWallet = (uid: string) => wallets.get(uid);
 
+// konfirmasi eksekusi instan: uang beneran bergerak, wajib YA eksplisit
+const pending = new Map<string, ParsedIntent>();
+export const getPending = (uid: string) => pending.get(uid);
+export const setPending = (uid: string, p: ParsedIntent) => void pending.set(uid, p);
+export const clearPending = (uid: string) => void pending.delete(uid);
+
 // admin demo terkontrol: /crash 440 | /price (hanya ADMIN_ID)
 export function parseCrash(text: string): number | null {
   const m = text.trim().match(/^\/crash\s+(\d+(\.\d+)?)$/);
@@ -62,6 +68,14 @@ async function handleText(uid: string, text: string, reply: (t: string) => Promi
   }
   const wallet = getWallet(uid);
   if (!wallet) return reply("Kirim alamat wallet 0x... dulu.");
+  const up = t.toUpperCase();
+  if (up === "YA" || up === "BATAL") {
+    const p = getPending(uid);
+    clearPending(uid);
+    if (up === "BATAL" || !p) return reply("Dibatalkan.");
+    return runInstant(uid, wallet, p, reply);
+  }
+  clearPending(uid); // pesan baru menggugurkan konfirmasi lama
   const parsed = await parseUserIntent(t);
   if (!parsed) return reply("❌ Tidak paham. Sebut token + harga. Cth: 'kumpulin receh jadi BNB'.");
   const route = routeIntent(parsed);
@@ -72,14 +86,19 @@ async function handleText(uid: string, text: string, reply: (t: string) => Promi
   }
   if (route === "execute_now") {
     if (!validateHedgeRequest(wallet, parsed.target)) return reply("❌ Target/wallet tidak diizinkan (guardrail).");
-    try {
-      const tx = await triggerHedgeTransaction(wallet);
-      return reply(tx ? `✅ Batch ${parsed.type} dieksekusi.\nTx: ${tx}` : "❌ Eksekusi gagal.");
-    } catch (e) {
-      return reply(`❌ Eksekusi gagal: ${failHint(e instanceof Error ? e.message : "")}`);
-    }
+    setPending(uid, parsed);
+    return reply(`⚠️ Konfirmasi: eksekusi ${parsed.type} sekarang? (hedge seluruh saldo BNB vault via Pancake)\nBalas YA untuk lanjut, BATAL untuk batal.`);
   }
   return reply("❌ Intent ditolak guardrail.");
+}
+
+async function runInstant(uid: string, wallet: string, parsed: ParsedIntent, reply: (t: string) => Promise<unknown>) {
+  try {
+    const tx = await triggerHedgeTransaction(wallet);
+    return reply(tx ? `🚨 Batch ${parsed.type} dieksekusi.\nTx: ${tx}\nCek: https://testnet.bscscan.com/tx/${tx}` : "❌ Eksekusi gagal.");
+  } catch (e) {
+    return reply(`❌ Eksekusi gagal: ${failHint(e instanceof Error ? e.message : "")}`);
+  }
 }
 
 async function answerInfo(uid: string, wallet: string, reply: (t: string) => Promise<unknown>) {
