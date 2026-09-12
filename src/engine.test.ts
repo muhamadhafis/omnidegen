@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { shouldTrigger, tickOnce } from "./loop";
 import { validateHedgeRequest } from "./web3";
-import { routeIntent, setWallet, getWallet, parseCrash, isAdmin } from "./bot";
+import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo } from "./bot";
 import { createDb, saveIntent, getActiveIntents } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
@@ -34,6 +34,15 @@ describe("engine", () => {
     expect(isAdmin("2")).toBe(false);
     delete process.env.ADMIN_ID;
     expect(isAdmin("1")).toBe(false);
+  });
+  test("format /info", () => {
+    const s = formatInfo(W, 2000000000000000n, 396434372331416720n, [
+      { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450 },
+    ]);
+    expect(s).toContain(W);
+    expect(s).toContain("0.002");
+    expect(s).toContain("stop_loss");
+    expect(formatInfo(W, 0n, 0n, [])).toContain("belum ada");
   });
   test("tickOnce end-to-end: crash mengeksekusi + notif", async () => {
     const conn = createDb();

@@ -11,7 +11,18 @@ export function validateHedgeRequest(userWallet: string, target: string): boolea
 const vaultAbi = [
   { type: "function", name: "executeHedge", inputs: [{ name: "user", type: "address" }, { name: "amount", type: "uint256" }, { name: "minOut", type: "uint256" }], outputs: [], stateMutability: "nonpayable" },
   { type: "function", name: "bnbBalance", inputs: [{ name: "", type: "address" }], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" },
+  { type: "function", name: "stableBalance", inputs: [{ name: "", type: "address" }], outputs: [{ name: "", type: "uint256" }], stateMutability: "view" },
 ] as const;
+
+export async function getVaultBalances(userWallet: string) {
+  const vault = process.env.VAULT_CONTRACT_ADDRESS as `0x${string}`;
+  const publicClient = createPublicClient({ chain: bscTestnet, transport: http(process.env.RPC_URL) });
+  const [bnb, stable] = await Promise.all([
+    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "bnbBalance", args: [userWallet as `0x${string}`] }),
+    publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "stableBalance", args: [userWallet as `0x${string}`] }),
+  ]) as [bigint, bigint];
+  return { bnb, stable };
+}
 
 export async function triggerHedgeTransaction(userWallet: string) {
   if (!/^0x[0-9a-fA-F]{40}$/.test(userWallet)) throw new Error("bad wallet");

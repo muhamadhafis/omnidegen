@@ -1,7 +1,8 @@
 import { parseUserIntent, type ParsedIntent } from "./ai";
-import { saveIntent } from "./db";
-import { triggerHedgeTransaction, validateHedgeRequest } from "./web3";
+import { getActiveIntents, saveIntent } from "./db";
+import { getVaultBalances, triggerHedgeTransaction, validateHedgeRequest } from "./web3";
 import { fetchPrice, setMockPrice } from "./loop";
+import { formatEther } from "viem";
 
 // pure + testable: routing 3 use-case
 export function routeIntent(p: ParsedIntent): "monitor" | "execute_now" | "reject" {
@@ -20,6 +21,12 @@ export function parseCrash(text: string): number | null {
   return p > 0 ? p : null;
 }
 export const isAdmin = (uid: string) => (process.env.ADMIN_ID ?? "") !== "" && uid === process.env.ADMIN_ID;
+
+// pure + testable: format /info
+export function formatInfo(wallet: string, bnb: bigint, stable: bigint, intents: any[]): string {
+  const rows = intents.map((i) => `• ${i.intent_type} ${i.asset_to_monitor}->${i.action_asset} @ $${i.trigger_price}`).join("\n") || "(belum ada strategi aktif)";
+  return `👛 ${wallet}\n💰 Vault: ${formatEther(bnb)} BNB | ${formatEther(stable)} mUSDC\n📋 Strategi aktif:\n${rows}`;
+}
 
 const token = () => process.env.TELEGRAM_BOT_TOKEN ?? "dummy";
 const api = (m: string) => `https://api.telegram.org/bot${token()}/${m}`;
@@ -78,7 +85,20 @@ async function poll() {
         const reply = (t: string) => sendMessage(uid, t);
         const ctx: Ctx = { from: { id: msg.from.id }, message: { text: msg.text }, reply };
         if (msg.text.startsWith("/start")) await startHandler(ctx);
-        else if (msg.text.startsWith("/crash") || msg.text === "/price") {
+        else if (msg.text === "/info") {
+          const w = getWallet(uid);
+          if (!w) {
+            await reply("Kirim alamat wallet 0x... dulu.");
+            continue;
+          }
+          try {
+            const b = await getVaultBalances(w);
+            const mine = (getActiveIntents() as any[]).filter((i) => i.user_id === uid);
+            await reply(formatInfo(w, b.bnb, b.stable, mine));
+          } catch {
+            await reply("❌ Gagal baca vault, coba lagi.");
+          }
+        } else if (msg.text.startsWith("/crash") || msg.text === "/price") {
           if (!isAdmin(uid)) {
             await reply("⛔ Khusus admin demo.");
             continue;
