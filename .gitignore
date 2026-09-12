@@ -3,3 +3,7 @@ node_modules/
 *.sqlite
 *.db
 dist/
+contracts/lib/
+contracts/out/
+contracts/cache/
+contracts/broadcast/
