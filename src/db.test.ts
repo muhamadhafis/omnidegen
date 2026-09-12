@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { createDb, saveIntent, getActiveIntents, claimIntent } from "./db";
+import { createDb, saveIntent, getActiveIntents, claimIntent, getLastIntent } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
 
@@ -22,5 +22,14 @@ describe("db", () => {
     const c = createDb();
     const id = saveIntent({ userId: "1", userWallet: W, intentType: "vacuum", asset: "DUST", target: "BNB" }, c);
     expect(id).toBeGreaterThan(0);
+  });
+  test("getLastIntent mengembalikan terbaru", () => {
+    const c = createDb();
+    expect(getLastIntent("1", c)).toBeNull();
+    const a = saveIntent({ userId: "1", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, c);
+    const b = saveIntent({ userId: "1", userWallet: W, intentType: "vacuum", asset: "DUST", target: "BNB" }, c);
+    expect((getLastIntent("1", c) as any).id).toBe(b);
+    expect((getLastIntent("2", c) as any)).toBeNull();
+    void a;
   });
 });

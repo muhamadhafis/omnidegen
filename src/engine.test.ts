@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
-import { shouldTrigger, tickOnce } from "./loop";
+import { shouldTrigger, tickOnce, failHint } from "./loop";
 import { validateHedgeRequest } from "./web3";
-import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo } from "./bot";
+import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo, statusLine } from "./bot";
 import { createDb, saveIntent, getActiveIntents } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
@@ -43,6 +43,8 @@ describe("engine", () => {
     expect(s).toContain("0.002");
     expect(s).toContain("stop_loss");
     expect(formatInfo(W, 0n, 0n, [])).toContain("belum ada");
+    expect(statusLine({ intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("gagal");
+    expect(formatInfo(W, 0n, 0n, [], { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("Terakhir");
   });
   test("tickOnce end-to-end: crash mengeksekusi + notif", async () => {
     const conn = createDb();
@@ -52,6 +54,19 @@ describe("engine", () => {
     expect(done).toEqual([id]);
     expect(sent.length).toBe(1);
     expect(getActiveIntents(conn).length).toBe(0);
+  });
+  test("tickOnce gagal: notif alasan + status failed", async () => {
+    const conn = createDb();
+    saveIntent({ userId: "u9", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, conn);
+    const sent: string[] = [];
+    const done = await tickOnce(440, { conn, exec: async () => { throw new Error("no deposit"); }, notify: async (uid, m) => void sent.push(m) });
+    expect(done).toEqual([]);
+    expect(sent.length).toBe(1);
+    expect(sent[0]).toContain("gagal");
+    expect(sent[0]).toContain("deposit");
+    expect(getActiveIntents(conn).length).toBe(0);
+    expect(failHint("no deposit")).toContain("deposit");
+    expect(failHint("boom")).toBe("boom");
   });
   test("tickOnce: harga aman tidak eksekusi", async () => {
     const conn = createDb();

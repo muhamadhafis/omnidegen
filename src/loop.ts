@@ -7,7 +7,11 @@ let mockPrice = 500;
 export const setMockPrice = (p: number) => (mockPrice = p);
 export const getMockPrice = () => mockPrice;
 
-// pure + testable: 1 fungsi untuk semua trigger
+// pure + testable: alasan gagal jadi bahasa manusia
+export function failHint(reason: string): string {
+  if (reason.includes("no deposit")) return "tidak ada BNB di vault — deposit dulu, cek /info";
+  return reason.slice(0, 120);
+}
 export function shouldTrigger(intent: any, price: number): boolean {
   if (intent.intent_type === "stop_loss") return price <= Number(intent.trigger_price);
   if (intent.intent_type === "take_profit") return price >= Number(intent.trigger_price);
@@ -44,8 +48,13 @@ export async function tickOnce(
           await notify(it.user_id, `🚨 ${tag}Penyelamatan: ${it.asset_to_monitor}->${it.action_asset} @ $${price}\nTx: ${tx}`);
         } catch {}
       } else updateIntentStatus(it.id, "active", conn);
-    } catch {
+    } catch (e) {
+      const reason = e instanceof Error ? e.message : "unknown";
       updateIntentStatus(it.id, "failed", conn);
+      console.log(`[hedge-gagal] user=${it.user_id} ${it.intent_type} sebab=${reason}`);
+      try {
+        await notify(it.user_id, `❌ ${it.intent_type} ${it.asset_to_monitor}->${it.action_asset} gagal: ${failHint(reason)}`);
+      } catch {}
     }
   }
   return done;

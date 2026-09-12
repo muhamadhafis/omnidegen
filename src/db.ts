@@ -69,3 +69,7 @@ export function claimIntent(id: number, conn: Database = db): boolean {
 export function updateIntentStatus(id: number, status: string, conn: Database = db) {
   conn.query(`UPDATE intents SET status=$s WHERE id=$id`).run({ $s: status, $id: id });
 }
+
+export function getLastIntent(userId: string, conn: Database = db) {
+  return conn.query(`SELECT * FROM intents WHERE user_id=$uid ORDER BY id DESC LIMIT 1`).get({ $uid: userId }) as any;
+}

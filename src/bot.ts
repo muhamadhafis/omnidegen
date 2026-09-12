@@ -1,5 +1,5 @@
 import { parseUserIntent, type ParsedIntent } from "./ai";
-import { getActiveIntents, saveIntent } from "./db";
+import { getActiveIntents, getLastIntent, saveIntent } from "./db";
 import { getVaultBalances, triggerHedgeTransaction, validateHedgeRequest } from "./web3";
 import { fetchPrice, setMockPrice } from "./loop";
 import { formatEther } from "viem";
@@ -23,9 +23,16 @@ export function parseCrash(text: string): number | null {
 export const isAdmin = (uid: string) => (process.env.ADMIN_ID ?? "") !== "" && uid === process.env.ADMIN_ID;
 
 // pure + testable: format /info
-export function formatInfo(wallet: string, bnb: bigint, stable: bigint, intents: any[]): string {
+export function statusLine(it: any): string {
+  const base = `${it.intent_type} ${it.asset_to_monitor}->${it.action_asset} @ $${it.trigger_price}`;
+  if (it.status === "executed") return `✅ ${base} — dieksekusi`;
+  if (it.status === "failed") return `❌ ${base} — gagal`;
+  return `• ${base}`;
+}
+export function formatInfo(wallet: string, bnb: bigint, stable: bigint, intents: any[], last?: any): string {
   const rows = intents.map((i) => `• ${i.intent_type} ${i.asset_to_monitor}->${i.action_asset} @ $${i.trigger_price}`).join("\n") || "(belum ada strategi aktif)";
-  return `👛 ${wallet}\n💰 Vault: ${formatEther(bnb)} BNB | ${formatEther(stable)} mUSDC\n📋 Strategi aktif:\n${rows}`;
+  const tail = last && last.status !== "active" ? `\n🕓 Terakhir: ${statusLine(last)}` : "";
+  return `👛 ${wallet}\n💰 Vault: ${formatEther(bnb)} BNB | ${formatEther(stable)} mUSDC\n📋 Strategi aktif:\n${rows}${tail}`;
 }
 
 const token = () => process.env.TELEGRAM_BOT_TOKEN ?? "dummy";
@@ -94,7 +101,7 @@ async function poll() {
           try {
             const b = await getVaultBalances(w);
             const mine = (getActiveIntents() as any[]).filter((i) => i.user_id === uid);
-            await reply(formatInfo(w, b.bnb, b.stable, mine));
+            await reply(formatInfo(w, b.bnb, b.stable, mine, getLastIntent(uid)));
           } catch {
             await reply("❌ Gagal baca vault, coba lagi.");
           }
