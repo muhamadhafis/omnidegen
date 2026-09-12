@@ -22,6 +22,7 @@ async function sendMessage(chat_id: string | number, text: string) {
     body: JSON.stringify({ chat_id, text }),
   }).then((r) => r.json());
   if (!r.ok) console.error("sendMessage fail:", JSON.stringify(r).slice(0, 200));
+  else console.log(`[reply -> ${chat_id}] ${text.slice(0, 80)}`);
   return r;
 }
 
@@ -64,6 +65,7 @@ async function poll() {
         const msg = u.message;
         if (!msg?.text) continue;
         const uid = String(msg.from.id);
+        console.log(`[inbox ${uid}] ${(msg.text ?? "").slice(0, 80)}`);
         const reply = (t: string) => sendMessage(uid, t);
         const ctx: Ctx = { from: { id: msg.from.id }, message: { text: msg.text }, reply };
         if (msg.text.startsWith("/start")) await startHandler(ctx);
