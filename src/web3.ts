@@ -1,6 +1,6 @@
 import { createWalletClient, createPublicClient, http } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
-import { opBNBTestnet } from "viem/chains";
+import { bscTestnet } from "viem/chains";
 
 const ALLOWED_TARGETS = new Set(["USDC", "USDT", "BNB"]);
 
@@ -17,8 +17,8 @@ export async function triggerHedgeTransaction(userWallet: string) {
   // ponytail: single relayer key, upgrade ke Session Key+Bundler/Paymaster kalau mainnet
   const account = privateKeyToAccount(process.env.BACKEND_PRIVATE_KEY as `0x${string}`);
   const vault = process.env.VAULT_CONTRACT_ADDRESS as `0x${string}`;
-  const publicClient = createPublicClient({ chain: opBNBTestnet, transport: http(process.env.RPC_URL) });
-  const walletClient = createWalletClient({ account, chain: opBNBTestnet, transport: http(process.env.RPC_URL) });
+  const publicClient = createPublicClient({ chain: bscTestnet, transport: http(process.env.RPC_URL) });
+  const walletClient = createWalletClient({ account, chain: bscTestnet, transport: http(process.env.RPC_URL) });
   const { request } = await publicClient.simulateContract({ account, address: vault, abi: vaultAbi, functionName: "executeHedge", args: [userWallet as `0x${string}`] });
   return walletClient.writeContract(request);
 }
