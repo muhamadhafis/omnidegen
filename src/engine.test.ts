@@ -1,7 +1,8 @@
 import { describe, test, expect } from "bun:test";
-import { shouldTrigger } from "./loop";
+import { shouldTrigger, tickOnce } from "./loop";
 import { validateHedgeRequest } from "./web3";
 import { routeIntent, setWallet, getWallet } from "./bot";
+import { createDb, saveIntent, getActiveIntents } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
 
@@ -23,5 +24,22 @@ describe("engine", () => {
     expect(routeIntent({ type: "defi_batch", asset: "USDT", target: "BNB", price: 0, amountPct: 50 })).toBe("execute_now");
     setWallet("u1", W);
     expect(getWallet("u1")).toBe(W);
+  });
+  test("tickOnce end-to-end: crash mengeksekusi + notif", async () => {
+    const conn = createDb();
+    const id = saveIntent({ userId: "u9", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, conn);
+    const sent: string[] = [];
+    const done = await tickOnce(440, { conn, exec: async () => "0xtest", notify: async (uid, m) => void sent.push(uid + m) });
+    expect(done).toEqual([id]);
+    expect(sent.length).toBe(1);
+    expect(getActiveIntents(conn).length).toBe(0);
+  });
+  test("tickOnce: harga aman tidak eksekusi", async () => {
+    const conn = createDb();
+    saveIntent({ userId: "u9", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, conn);
+    let called = 0;
+    expect(await tickOnce(500, { conn, exec: async () => void called++ && "0xx" })).toEqual([]);
+    expect(called).toBe(0);
+    expect(getActiveIntents(conn).length).toBe(1);
   });
 });

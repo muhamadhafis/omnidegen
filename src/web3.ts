@@ -13,7 +13,10 @@ const vaultAbi = [
 ] as const;
 
 export async function triggerHedgeTransaction(userWallet: string) {
-  if (!validateHedgeRequest(userWallet, "USDC") && !/^0x[0-9a-fA-F]{40}$/.test(userWallet)) throw new Error("bad wallet");
+  if (!/^0x[0-9a-fA-F]{40}$/.test(userWallet)) throw new Error("bad wallet");
+  // ponytail: mock hash sampai OmniVault deploy di BSC testnet (MOCK_TX=false kalau sudah deploy)
+  if (process.env.MOCK_TX !== "false")
+    return `0xmock${Date.now().toString(16)}${userWallet.slice(2, 10)}` as `0x${string}`;
   // ponytail: single relayer key, upgrade ke Session Key+Bundler/Paymaster kalau mainnet
   const account = privateKeyToAccount(process.env.BACKEND_PRIVATE_KEY as `0x${string}`);
   const vault = process.env.VAULT_CONTRACT_ADDRESS as `0x${string}`;

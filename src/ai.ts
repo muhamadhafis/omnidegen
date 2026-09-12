@@ -9,6 +9,7 @@ export type ParsedIntent = {
   amountPct: number;
 };
 
+export const GROQ_MODEL = process.env.GROQ_MODEL ?? "openai/gpt-oss-20b";
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY ?? "dummy" });
 
 const SYSTEM = `Ekstrak perintah user jadi JSON murni tanpa markdown.
@@ -40,7 +41,7 @@ export async function parseUserIntent(text: string, client = groq): Promise<Pars
         { role: "system", content: SYSTEM },
         { role: "user", content: text },
       ],
-      model: "llama-3.1-8b-instant",
+      model: GROQ_MODEL,
       response_format: { type: "json_object" },
     } as any);
     return parseIntentJson(r.choices[0]?.message?.content ?? "");

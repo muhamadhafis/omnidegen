@@ -1,6 +1,7 @@
-import { claimIntent, getActiveIntents, updateIntentStatus } from "./db";
+import { claimIntent, db, getActiveIntents, updateIntentStatus } from "./db";
 import { triggerHedgeTransaction } from "./web3";
 import { bot } from "./bot";
+import type { Database } from "bun:sqlite";
 
 let mockPrice = 500;
 export const setMockPrice = (p: number) => (mockPrice = p);
@@ -20,23 +21,29 @@ export async function fetchPrice(): Promise<number> {
   return Number(j.binancecoin.usd);
 }
 
-export async function tickOnce(price = mockPrice) {
+export async function tickOnce(
+  price = mockPrice,
+  deps: { conn?: Database; exec?: (w: string) => Promise<unknown>; notify?: (uid: string, msg: string) => Promise<unknown> } = {},
+) {
+  const conn = deps.conn ?? db;
+  const exec = deps.exec ?? triggerHedgeTransaction;
+  const notify = deps.notify ?? ((uid, msg) => bot.telegram.sendMessage(uid, msg));
   const done: number[] = [];
-  for (const it of getActiveIntents() as any[]) {
+  for (const it of getActiveIntents(conn) as any[]) {
     if (it.asset_to_monitor?.toUpperCase() !== "BNB") continue;
     if (!shouldTrigger(it, price)) continue;
-    if (!claimIntent(it.id)) continue; // kalah race -> skip
+    if (!claimIntent(it.id, conn)) continue; // kalah race -> skip
     try {
-      const tx = await triggerHedgeTransaction(it.user_wallet);
+      const tx = await exec(it.user_wallet);
       if (tx) {
-        updateIntentStatus(it.id, "executed");
+        updateIntentStatus(it.id, "executed", conn);
         done.push(it.id);
         try {
-          await bot.telegram.sendMessage(it.user_id, `🚨 Penyelamatan: ${it.asset_to_monitor}->${it.action_asset} @ $${price}\nTx: ${tx}`);
+          await notify(it.user_id, `🚨 Penyelamatan: ${it.asset_to_monitor}->${it.action_asset} @ $${price}\nTx: ${tx}`);
         } catch {}
-      } else updateIntentStatus(it.id, "active");
+      } else updateIntentStatus(it.id, "active", conn);
     } catch {
-      updateIntentStatus(it.id, "failed");
+      updateIntentStatus(it.id, "failed", conn);
     }
   }
   return done;
