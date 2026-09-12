@@ -38,8 +38,10 @@ export async function tickOnce(
       if (tx) {
         updateIntentStatus(it.id, "executed", conn);
         done.push(it.id);
+        const tag = String(tx).startsWith("0xmock") ? "[SIMULASI] " : "";
+        console.log(`[hedge] ${tag}user=${it.user_id} ${it.asset_to_monitor}->${it.action_asset} @ $${price} tx=${tx}`);
         try {
-          await notify(it.user_id, `🚨 Penyelamatan: ${it.asset_to_monitor}->${it.action_asset} @ $${price}\nTx: ${tx}`);
+          await notify(it.user_id, `🚨 ${tag}Penyelamatan: ${it.asset_to_monitor}->${it.action_asset} @ $${price}\nTx: ${tx}`);
         } catch {}
       } else updateIntentStatus(it.id, "active", conn);
     } catch {
