@@ -17,11 +17,12 @@ const vaultAbi = [
 export async function getVaultBalances(userWallet: string) {
   const vault = process.env.VAULT_CONTRACT_ADDRESS as `0x${string}`;
   const publicClient = createPublicClient({ chain: bscTestnet, transport: http(process.env.RPC_URL) });
-  const [bnb, stable] = await Promise.all([
+  const [walletBnb, bnb, stable] = await Promise.all([
+    publicClient.getBalance({ address: userWallet as `0x${string}` }),
     publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "bnbBalance", args: [userWallet as `0x${string}`] }),
     publicClient.readContract({ address: vault, abi: vaultAbi, functionName: "stableBalance", args: [userWallet as `0x${string}`] }),
-  ]) as [bigint, bigint];
-  return { bnb, stable };
+  ]) as [bigint, bigint, bigint];
+  return { walletBnb, bnb, stable };
 }
 
 export async function triggerHedgeTransaction(userWallet: string) {

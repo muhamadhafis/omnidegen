@@ -37,15 +37,17 @@ describe("engine", () => {
     expect(isAdmin("1")).toBe(false);
   });
   test("format /info", () => {
-    const s = formatInfo(W, 2000000000000000n, 396434372331416720n, [
+    const bal = { walletBnb: 5000000000000000n, bnb: 2000000000000000n, stable: 396434372331416720n };
+    const s = formatInfo(W, bal, [
       { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450 },
     ]);
     expect(s).toContain(W);
+    expect(s).toContain("0.005");
     expect(s).toContain("0.002");
     expect(s).toContain("stop_loss");
-    expect(formatInfo(W, 0n, 0n, [])).toContain("belum ada");
+    expect(formatInfo(W, { walletBnb: 0n, bnb: 0n, stable: 0n }, [])).toContain("belum ada");
     expect(statusLine({ intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("gagal");
-    expect(formatInfo(W, 0n, 0n, [], { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("Terakhir");
+    expect(formatInfo(W, { walletBnb: 0n, bnb: 0n, stable: 0n }, [], { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("Terakhir");
   });
   test("tickOnce end-to-end: crash mengeksekusi + notif", async () => {
     const conn = createDb();

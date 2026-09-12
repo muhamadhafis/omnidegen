@@ -30,10 +30,10 @@ export function statusLine(it: any): string {
   if (it.status === "failed") return `❌ ${base} — gagal`;
   return `• ${base}`;
 }
-export function formatInfo(wallet: string, bnb: bigint, stable: bigint, intents: any[], last?: any): string {
+export function formatInfo(wallet: string, b: { walletBnb: bigint; bnb: bigint; stable: bigint }, intents: any[], last?: any): string {
   const rows = intents.map((i) => `• ${i.intent_type} ${i.asset_to_monitor}->${i.action_asset} @ $${i.trigger_price}`).join("\n") || "(belum ada strategi aktif)";
   const tail = last && last.status !== "active" ? `\n🕓 Terakhir: ${statusLine(last)}` : "";
-  return `👛 ${wallet}\n💰 Vault: ${formatEther(bnb)} BNB | ${formatEther(stable)} mUSDC\n📋 Strategi aktif:\n${rows}${tail}`;
+  return `👛 ${wallet}\n💰 Wallet: ${formatEther(b.walletBnb)} BNB\n🏦 Vault: ${formatEther(b.bnb)} BNB | ${formatEther(b.stable)} mUSDC\n📋 Strategi aktif:\n${rows}${tail}`;
 }
 
 const token = () => process.env.TELEGRAM_BOT_TOKEN ?? "dummy";
@@ -86,7 +86,7 @@ async function answerInfo(uid: string, wallet: string, reply: (t: string) => Pro
   try {
     const b = await getVaultBalances(wallet);
     const mine = (getActiveIntents() as any[]).filter((i) => i.user_id === uid);
-    return reply(formatInfo(wallet, b.bnb, b.stable, mine, getLastIntent(uid)));
+    return reply(formatInfo(wallet, b, mine, getLastIntent(uid)));
   } catch {
     return reply("❌ Gagal baca vault, coba lagi.");
   }
