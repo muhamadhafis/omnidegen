@@ -4,7 +4,7 @@ Type a strategy in plain language on Telegram. AI watches the market 24/7 and
 hedges your assets on-chain when the trigger hits. One product, three tracks:
 **Consumer** (Telegram bot) · **AI Agents** (Groq parser + monitor) · **Finance** (OmniVault + real PancakeSwap swaps on BSC testnet).
 
-Live bot: https://t.me/ombidegen_bot
+Live bot: https://t.me/omnidegen_bot
 
 ## How it works
 
