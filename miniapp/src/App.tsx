@@ -11,6 +11,7 @@ import {
 import { useAppKit } from "@reown/appkit/react";
 import { formatEther, parseEther } from "viem";
 import { BOT_URL, CHAIN, MUSDC, SCAN_TX, VAULT, WBNB } from "./config";
+import { WALLETS } from "./wallets";
 import { erc20Abi, wbnbAbi } from "./abi";
 import { initTelegram, shortAddr, tg } from "./telegram";
 
@@ -25,6 +26,23 @@ function Field({ label, value }: { label: string; value: string }) {
     <div className="row">
       <span className="label">{label}</span>
       <span className="value">{value}</span>
+    </div>
+  );
+}
+
+// Saat tx pending di HP: webview tidak auto-buka dompet, jadi sediakan
+// shortcut tap-to-open per dompet agar request tanda tangan terlihat.
+function WalletShortcuts() {
+  return (
+    <div aria-live="polite">
+      <p>Ketuk dompetmu untuk tanda tangan:</p>
+      <div className="chips">
+        {WALLETS.map((w) => (
+          <a key={w.id} className="chip" href={w.scheme}>
+            {w.label} →
+          </a>
+        ))}
+      </div>
     </div>
   );
 }
@@ -124,6 +142,7 @@ export default function App() {
               </button>
             </div>
             <div aria-live="polite">
+              {wrap.isPending && <WalletShortcuts />}
               {wrap.hash && <a className="tx" href={SCAN_TX(wrap.hash)} target="_blank" rel="noreferrer">lihat tx →</a>}
               {wrap.error && <p className="err">gagal: {wrap.error.message.slice(0, 100)}</p>}
             </div>
@@ -150,6 +169,7 @@ export default function App() {
                 Revoke
               </button>
             </div>
+            {appr.isPending && <WalletShortcuts />}
             {appr.hash && <a className="tx" href={SCAN_TX(appr.hash)} target="_blank" rel="noreferrer">lihat tx →</a>}
             {appr.error && <p className="err" aria-live="polite">gagal: {appr.error.message.slice(0, 100)}</p>}
           </div>
