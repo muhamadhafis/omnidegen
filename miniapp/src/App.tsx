@@ -10,7 +10,7 @@ import {
 } from "wagmi";
 import { useAppKit } from "@reown/appkit/react";
 import { formatEther, parseEther } from "viem";
-import { BOT_URL, CHAIN, MUSDC, SCAN_TX, VAULT, WBNB } from "./config";
+import { BOT_URL, CHAIN, MUSDC, SCAN_TX, VAULT, WBNB, appKit } from "./config";
 import { WALLETS, openWalletApp } from "./wallets";
 import { erc20Abi, wbnbAbi } from "./abi";
 import { initTelegram, shortAddr, tg } from "./telegram";
@@ -19,6 +19,56 @@ function useTx() {
   const { data: hash, error, isPending, writeContract } = useWriteContract();
   const { isSuccess } = useWaitForTransactionReceipt({ hash });
   return { hash, error, isPending, isSuccess, writeContract };
+}
+
+// Pairing manual: untuk dompet yang modalnya tak memunculkan prompt
+// (kasus Trust di webview). Prefetch URI lalu deep-link langsung ke wallet.
+function ManualPair({ onDone }: { onDone: () => void }) {
+  const [uri, setUri] = useState<string>("");
+  useEffect(() => {
+    appKit.prefetchWalletConnectUri();
+    const read = () => {
+      const snap = appKit.getWalletConnectUri() as { uri?: string };
+      if (snap?.uri) setUri(snap.uri);
+    };
+    read();
+    const unsub = appKit.subscribeWalletConnectUri(read);
+    return () => {
+      unsub();
+      appKit.resetWalletConnectUri();
+    };
+  }, []);
+  const cancel = () => {
+    appKit.resetWalletConnectUri();
+    onDone();
+  };
+  return (
+    <div className="card" aria-live="polite">
+      <h2>Pairing manual</h2>
+      {!uri ? (
+        <p>Siapkan sesi…</p>
+      ) : (
+        <>
+          <p>Langkah: ketuk tombol dompetmu → approve di aplikasinya → kembali ke sini.</p>
+          <a className="btn primary" href={`https://link.trustwallet.com/wc?uri=${encodeURIComponent(uri)}`}>
+            Buka di Trust →
+          </a>
+          <button
+            className="btn"
+            onClick={() => {
+              navigator.clipboard?.writeText(uri).catch(() => {});
+              tg()?.showAlert("URI tersalin — paste di dompetmu (WalletConnect)");
+            }}
+          >
+            Salin URI pairing
+          </button>
+          <button className="btn ghost" onClick={cancel}>
+            Batal
+          </button>
+        </>
+      )}
+    </div>
+  );
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -60,6 +110,7 @@ export default function App() {
   }, [wrongNet]); // eslint-disable-line react-hooks/exhaustive-deps
   const [wrapAmt, setWrapAmt] = useState("0.001");
   const [capAmt, setCapAmt] = useState("0.001");
+  const [manualPair, setManualPair] = useState(false);
   const wrap = useTx();
   const appr = useTx();
 
@@ -114,12 +165,19 @@ export default function App() {
       )}
 
       {!isConnected ? (
-        <div className="card">
-          <p>Hubungkan dompet untuk mulai. Private key tidak pernah keluar dari HP kamu.</p>
-          <button className="btn primary" onClick={() => open()}>
-            Connect Wallet
-          </button>
-        </div>
+        manualPair ? (
+          <ManualPair onDone={() => setManualPair(false)} />
+        ) : (
+          <div className="card">
+            <p>Hubungkan dompet untuk mulai. Private key tidak pernah keluar dari HP kamu.</p>
+            <button className="btn primary" onClick={() => open()}>
+              Connect Wallet
+            </button>
+            <button className="link" onClick={() => setManualPair(true)}>
+              Prompt tidak muncul? Pairing manual →
+            </button>
+          </div>
+        )
       ) : wrongNet ? null : (
         <>
           <div className="card">

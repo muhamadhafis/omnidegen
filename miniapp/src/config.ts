@@ -14,7 +14,7 @@ export const CHAIN = bscTestnet;
 
 export const wagmiAdapter = new WagmiAdapter({ networks, projectId });
 
-createAppKit({
+export const appKit = createAppKit({
   adapters: [wagmiAdapter],
   networks,
   projectId,
