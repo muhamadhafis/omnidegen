@@ -2,12 +2,12 @@ import { useEffect, useState } from "react";
 import {
   useAccount,
   useBalance,
-  useConnect,
   useDisconnect,
   useReadContract,
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
+import { useAppKit } from "@reown/appkit/react";
 import { formatEther, parseEther } from "viem";
 import { BOT_URL, MUSDC, SCAN_TX, VAULT, WBNB } from "./config";
 import { erc20Abi, wbnbAbi } from "./abi";
@@ -30,7 +30,7 @@ function Field({ label, value }: { label: string; value: string }) {
 
 export default function App() {
   const { address, isConnected } = useAccount();
-  const { connect, connectors } = useConnect();
+  const { open } = useAppKit();
   const { disconnect } = useDisconnect();
   const [wrapAmt, setWrapAmt] = useState("0.001");
   const [capAmt, setCapAmt] = useState("0.001");
@@ -76,11 +76,9 @@ export default function App() {
       {!isConnected ? (
         <div className="card">
           <p>Hubungkan dompet untuk mulai. Private key tidak pernah keluar dari HP kamu.</p>
-          {connectors.map((c) => (
-            <button key={c.uid} className="btn primary" onClick={() => connect({ connector: c })}>
-              Connect {c.name}
-            </button>
-          ))}
+          <button className="btn primary" onClick={() => open()}>
+            Connect Wallet
+          </button>
         </div>
       ) : (
         <>
