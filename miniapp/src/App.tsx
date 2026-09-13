@@ -33,7 +33,7 @@ export default function App() {
   const { address, isConnected, chainId } = useAccount();
   const { open } = useAppKit();
   const { disconnect } = useDisconnect();
-  const { switchChain, isPending: switching } = useSwitchChain();
+  const { switchChain, isPending: switching, error: switchError } = useSwitchChain();
   const wrongNet = isConnected && chainId !== CHAIN.id;
 
   // otomatis pindah ke BSC testnet (dompet yang belum punya chain akan diminta menambahkannya)
@@ -87,6 +87,11 @@ export default function App() {
           <button className="btn primary" disabled={switching} onClick={() => switchChain({ chainId: CHAIN.id })}>
             {switching ? "…" : "Pindah ke BSC Testnet"}
           </button>
+          {switchError && (
+            <p className="err" aria-live="polite">
+              Dompet tidak merespons. Buka aplikasi dompetmu manual, pindah ke BSC Testnet (chain 97), lalu kembali.
+            </p>
+          )}
         </div>
       )}
 

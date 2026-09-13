@@ -25,5 +25,6 @@ createAppKit({
     icons: ["https://miniapp-omnidegen.vercel.app/favicon.svg"],
   },
   themeMode: "dark",
+  allWallets: "SHOW",
   features: { analytics: false, email: false, socials: false },
 });
