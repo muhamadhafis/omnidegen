@@ -81,7 +81,10 @@ src/            backend (Bun 1.4 + SQLite + Groq + viem, Telegram via stdlib fet
   web3.ts       relayer: reads vault balance, fires executeHedge
   bot.ts        Telegram long-polling, wallet onboarding, intent routing
 contracts/      Foundry: MockOracle + MockUSDC + OmniVault + Deploy script
+miniapp/        Vite+React+wagmi wallet companion (https://miniapp-omnidegen.vercel.app)
+  Connect (WalletConnect) → Balances → Wrap → Approve/Revoke → back to chat
 ```
+Bot commands: `/start` (tombol 📱 Buka Dompet) · `/app` · `/info` · `/approve` · `/price` · `/crash` (admin)
 
 ## Production notes (deliberately out of MVP scope)
 
