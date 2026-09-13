@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { shouldTrigger, tickOnce, failHint } from "./loop";
 import { validateHedgeRequest } from "./web3";
-import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo, statusLine, setPending, getPending, clearPending } from "./bot";
+import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo, statusLine, approveText, setPending, getPending, clearPending } from "./bot";
 import { createDb, saveIntent, getActiveIntents } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
@@ -37,17 +37,20 @@ describe("engine", () => {
     expect(isAdmin("1")).toBe(false);
   });
   test("format /info", () => {
-    const bal = { walletBnb: 5000000000000000n, bnb: 2000000000000000n, stable: 396434372331416720n };
+    const bal = { walletBnb: 5000000000000000n, wbnb: 1000000000000000n, allowance: 1000000000000000n, stable: 396434372331416720n };
     const s = formatInfo(W, bal, [
       { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450 },
     ]);
     expect(s).toContain(W);
     expect(s).toContain("0.005");
-    expect(s).toContain("0.002");
+    expect(s).toContain("0.001");
     expect(s).toContain("stop_loss");
-    expect(formatInfo(W, { walletBnb: 0n, bnb: 0n, stable: 0n }, [])).toContain("belum ada");
+    expect(s).toContain("Izin ke vault");
+    expect(formatInfo(W, { walletBnb: 0n, wbnb: 0n, allowance: 0n, stable: 0n }, [])).toContain("belum ada");
     expect(statusLine({ intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("gagal");
-    expect(formatInfo(W, { walletBnb: 0n, bnb: 0n, stable: 0n }, [], { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("Terakhir");
+    expect(formatInfo(W, { walletBnb: 0n, wbnb: 0n, allowance: 0n, stable: 0n }, [], { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("Terakhir");
+    expect(approveText()).toContain("Approve");
+    expect(failHint("no approve")).toContain("/approve");
   });
   test("pending konfirmasi instan", () => {
     const p: any = { type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 };

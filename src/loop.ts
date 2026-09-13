@@ -9,6 +9,8 @@ export const getMockPrice = () => mockPrice;
 
 // pure + testable: alasan gagal jadi bahasa manusia
 export function failHint(reason: string): string {
+  if (reason.includes("no approve")) return "belum approve vault — ketik /approve";
+  if (reason.includes("no balance")) return "saldo WBNB kurang — wrap dulu, cek /info";
   if (reason.includes("no deposit")) return "tidak ada BNB di vault — deposit dulu, cek /info";
   return reason.slice(0, 120);
 }

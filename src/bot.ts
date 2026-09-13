@@ -1,6 +1,6 @@
 import { parseUserIntent, type ParsedIntent } from "./ai";
 import { getActiveIntents, getLastIntent, saveIntent } from "./db";
-import { getVaultBalances, triggerHedgeTransaction, validateHedgeRequest } from "./web3";
+import { WBNB, getVaultBalances, triggerHedgeTransaction, validateHedgeRequest } from "./web3";
 import { fetchPrice, setMockPrice, failHint } from "./loop";
 import { formatEther } from "viem";
 
@@ -36,10 +36,16 @@ export function statusLine(it: any): string {
   if (it.status === "failed") return `❌ ${base} — gagal`;
   return `• ${base}`;
 }
-export function formatInfo(wallet: string, b: { walletBnb: bigint; bnb: bigint; stable: bigint }, intents: any[], last?: any): string {
+export function formatInfo(wallet: string, b: { walletBnb: bigint; wbnb: bigint; allowance: bigint; stable: bigint }, intents: any[], last?: any): string {
   const rows = intents.map((i) => `• ${i.intent_type} ${i.asset_to_monitor}->${i.action_asset} @ $${i.trigger_price}`).join("\n") || "(belum ada strategi aktif)";
   const tail = last && last.status !== "active" ? `\n🕓 Terakhir: ${statusLine(last)}` : "";
-  return `👛 ${wallet}\n💰 Wallet: ${formatEther(b.walletBnb)} BNB\n🏦 Vault: ${formatEther(b.bnb)} BNB | ${formatEther(b.stable)} mUSDC\n📋 Strategi aktif:\n${rows}${tail}`;
+  return `👛 ${wallet}\n💰 Wallet: ${formatEther(b.walletBnb)} BNB | ${formatEther(b.wbnb)} WBNB | ${formatEther(b.stable)} mUSDC\n🛡️ Izin ke vault: ${formatEther(b.allowance)} WBNB\n📋 Strategi aktif:\n${rows}${tail}`;
+}
+
+// pure + testable: teks panduan /approve
+export function approveText(): string {
+  const v = process.env.VAULT_CONTRACT_ADDRESS ?? "?";
+  return `🛡️ Izinkan vault menarik WBNB saat rescue (bisa dicabut kapan saja):\n1. Wrap: kontrak WBNB ${WBNB} → deposit() isi BNB\n2. Approve: kontrak WBNB → approve(${v}, jumlah)\nCek izin aktif via /info.`;
 }
 
 const token = () => process.env.TELEGRAM_BOT_TOKEN ?? "dummy";
@@ -134,6 +140,8 @@ async function poll() {
             continue;
           }
           await answerInfo(uid, w, reply);
+        } else if (msg.text === "/approve") {
+          await reply(approveText());
         } else if (msg.text.startsWith("/crash") || msg.text === "/price") {
           if (!isAdmin(uid)) {
             await reply("⛔ Khusus admin demo.");

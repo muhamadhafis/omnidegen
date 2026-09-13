@@ -32,13 +32,16 @@ is a free loop — no API bills, no hallucinated money moves.
 
 | Contract   | Address                                      |
 | ---------- | -------------------------------------------- |
-| OmniVault  | `0x7645f1858fD6EFC426a45B81ca03381552dfd48C` |
+| OmniVaultV2 (current, pull-model) | `0x1B846fb2d2EB2FD83Da5680d0b63CcAee04511C4` |
+| OmniVault V1 (retired, deposit-model) | `0x7645f1858fD6EFC426a45B81ca03381552dfd48C` |
 | MockUSDC   | `0x5930d789bE286F3645BD6678fB8eD1c786c2CE36` |
 | MockOracle | `0x519643daDc0E3Eb8f862cA8685C7179a2cA3fC71` |
 
 Deps on testnet: Pancake V2 router `0xD99D1c33F9fC3444f8101754aBC46c52416550D1`,
-WBNB `0xae13d989dac2f0debff460ac112a837c89baa7cd`. Proven end-to-end:
-0.002 tBNB deposit → crash trigger → `stableBalance 0.71 mUSDC`, real swap.
+WBNB `0xae13d989dac2f0debff460ac112a837c89baa7cd`. V2 is non-custodial:
+user wraps BNB→WBNB once, approves a cap to the vault (`/approve`), funds never
+leave their wallet until a rescue pulls, swaps, and pays mUSDC straight back.
+Proven live: wrap 0.0005 → approve → `executeHedgePull` → 0.1986 mUSDC to user.
 
 ## Run locally
 
