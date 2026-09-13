@@ -4,12 +4,13 @@ import {
   useBalance,
   useDisconnect,
   useReadContract,
+  useSwitchChain,
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
 import { useAppKit } from "@reown/appkit/react";
 import { formatEther, parseEther } from "viem";
-import { BOT_URL, MUSDC, SCAN_TX, VAULT, WBNB } from "./config";
+import { BOT_URL, CHAIN, MUSDC, SCAN_TX, VAULT, WBNB } from "./config";
 import { erc20Abi, wbnbAbi } from "./abi";
 import { initTelegram, shortAddr, tg } from "./telegram";
 
@@ -29,9 +30,16 @@ function Field({ label, value }: { label: string; value: string }) {
 }
 
 export default function App() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chainId } = useAccount();
   const { open } = useAppKit();
   const { disconnect } = useDisconnect();
+  const { switchChain, isPending: switching } = useSwitchChain();
+  const wrongNet = isConnected && chainId !== CHAIN.id;
+
+  // otomatis pindah ke BSC testnet (dompet yang belum punya chain akan diminta menambahkannya)
+  useEffect(() => {
+    if (wrongNet) switchChain({ chainId: CHAIN.id });
+  }, [wrongNet]); // eslint-disable-line react-hooks/exhaustive-deps
   const [wrapAmt, setWrapAmt] = useState("0.001");
   const [capAmt, setCapAmt] = useState("0.001");
   const wrap = useTx();
@@ -73,6 +81,15 @@ export default function App() {
         <span className="badge">BSC Testnet</span>
       </header>
 
+      {wrongNet && (
+        <div className="card warn-card" aria-live="polite">
+          <p>Jaringan salah — pindah ke BSC Testnet untuk lanjut.</p>
+          <button className="btn primary" disabled={switching} onClick={() => switchChain({ chainId: CHAIN.id })}>
+            {switching ? "…" : "Pindah ke BSC Testnet"}
+          </button>
+        </div>
+      )}
+
       {!isConnected ? (
         <div className="card">
           <p>Hubungkan dompet untuk mulai. Private key tidak pernah keluar dari HP kamu.</p>
@@ -80,7 +97,7 @@ export default function App() {
             Connect Wallet
           </button>
         </div>
-      ) : (
+      ) : wrongNet ? null : (
         <>
           <div className="card">
             <div className="addr">

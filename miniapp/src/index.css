@@ -53,6 +53,10 @@ h2 {
   padding: 2px 10px;
 }
 
+.warn-card {
+  border-color: var(--accent);
+}
+
 .card {
   background: var(--card);
   border: 1px solid var(--border);

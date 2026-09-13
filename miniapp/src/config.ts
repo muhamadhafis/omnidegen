@@ -10,6 +10,7 @@ export const SCAN_TX = (h: string) => `https://testnet.bscscan.com/tx/${h}`;
 
 const projectId = import.meta.env.VITE_WC_PROJECT_ID ?? "";
 const networks: [typeof bscTestnet] = [bscTestnet];
+export const CHAIN = bscTestnet;
 
 export const wagmiAdapter = new WagmiAdapter({ networks, projectId });
 
