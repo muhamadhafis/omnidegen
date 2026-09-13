@@ -173,6 +173,7 @@ export default function App() {
             <button className="btn primary" onClick={() => open()}>
               Connect Wallet
             </button>
+            <p className="hint">HP: MetaMask / Trust / OKX. Rabby hanya di desktop (tidak dukung BSC testnet via WalletConnect).</p>
             <button className="link" onClick={() => setManualPair(true)}>
               Prompt tidak muncul? Pairing manual →
             </button>

@@ -65,7 +65,6 @@ forge script script/Deploy.s.sol --rpc-url $RPC_URL --private-key $BACKEND_PRIVA
 ```
 
 ## 2-minute demo script (for judges)
-
 1. `/start` → send wallet `0x...` → send *"Jual BNB ke USDC kalau turun di bawah $450"* → bot confirms `stop_loss` active.
 2. `cast send $ORACLE "setPrice(uint256)" 440e8 ...` (controlled crash) → loop fires → real `executeHedge` tx → Telegram alert with hash. Show it on testnet.bscscan.com.
 3. Send *"kumpulin receh jadi BNB"* → `vacuum` executes immediately as one batch.
@@ -85,6 +84,9 @@ miniapp/        Vite+React+wagmi wallet companion (https://miniapp-omnidegen.ver
   Connect (WalletConnect) → Balances → Wrap → Approve/Revoke → back to chat
 ```
 Bot commands: `/start` (tombol 📱 Buka Dompet) · `/app` · `/info` · `/approve` · `/price` · `/crash` (admin)
+
+Wallet compat: mobile → MetaMask / Trust / OKX (Rabby mobile lacks BSC-testnet
+WalletConnect namespace + deep links, desktop only); instant actions ask YA first.
 
 ## Production notes (deliberately out of MVP scope)
 
