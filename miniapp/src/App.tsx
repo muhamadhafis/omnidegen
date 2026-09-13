@@ -11,7 +11,7 @@ import {
 import { useAppKit } from "@reown/appkit/react";
 import { formatEther, parseEther } from "viem";
 import { BOT_URL, CHAIN, MUSDC, SCAN_TX, VAULT, WBNB } from "./config";
-import { WALLETS } from "./wallets";
+import { WALLETS, openWalletApp } from "./wallets";
 import { erc20Abi, wbnbAbi } from "./abi";
 import { initTelegram, shortAddr, tg } from "./telegram";
 
@@ -38,9 +38,9 @@ function WalletShortcuts() {
       <p>Ketuk dompetmu untuk tanda tangan:</p>
       <div className="chips">
         {WALLETS.map((w) => (
-          <a key={w.id} className="chip" href={w.scheme}>
+          <button key={w.id} type="button" className="chip" onClick={() => openWalletApp(w.scheme)}>
             {w.label} →
-          </a>
+          </button>
         ))}
       </div>
     </div>
