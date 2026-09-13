@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { shouldTrigger, tickOnce, failHint } from "./loop";
 import { validateHedgeRequest } from "./web3";
-import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo, statusLine, approveText, setPending, getPending, clearPending } from "./bot";
+import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo, statusLine, approveText, webAppKeyboard, setPending, getPending, clearPending } from "./bot";
 import { createDb, saveIntent, getActiveIntents } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
@@ -52,13 +52,19 @@ describe("engine", () => {
     expect(approveText()).toContain("Approve");
     expect(failHint("no approve")).toContain("/approve");
   });
-  test("pending konfirmasi instan", () => {
-    const p: any = { type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 };
+  test("pending konfirmasi instan", () => {    const p: any = { type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 };
     expect(getPending("u1")).toBeUndefined();
     setPending("u1", p);
     expect(getPending("u1")).toEqual(p);
     clearPending("u1");
     expect(getPending("u1")).toBeUndefined();
+  });
+  test("keyboard mini app", () => {
+    delete process.env.MINIAPP_URL;
+    expect(webAppKeyboard()).toBeUndefined();
+    process.env.MINIAPP_URL = "https://x.vercel.app";
+    expect(JSON.stringify(webAppKeyboard())).toContain("web_app");
+    delete process.env.MINIAPP_URL;
   });
   test("tickOnce end-to-end: crash mengeksekusi + notif", async () => {
     const conn = createDb();

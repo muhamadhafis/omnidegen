@@ -51,15 +51,22 @@ export function approveText(): string {
 const token = () => process.env.TELEGRAM_BOT_TOKEN ?? "dummy";
 const api = (m: string) => `https://api.telegram.org/bot${token()}/${m}`;
 
-async function sendMessage(chat_id: string | number, text: string) {
+async function sendMessage(chat_id: string | number, text: string, markup?: unknown) {
   const r = await fetch(api("sendMessage"), {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ chat_id, text }),
+    body: JSON.stringify({ chat_id, text, ...(markup ? { reply_markup: markup } : {}) }),
   }).then((r) => r.json());
   if (!r.ok) console.error("sendMessage fail:", JSON.stringify(r).slice(0, 200));
   else console.log(`[reply -> ${chat_id}] ${text.slice(0, 80)}`);
   return r;
+}
+
+// pure + testable: keyboard tombol Mini App (hilang kalau URL belum diset)
+export function webAppKeyboard(): unknown {
+  const url = process.env.MINIAPP_URL ?? "";
+  if (!url) return undefined;
+  return { inline_keyboard: [[{ text: "📱 Buka Dompet", web_app: { url } }]] };
 }
 
 type Ctx = { from: { id: number }; message: { text: string }; reply: (t: string) => Promise<unknown> };
@@ -132,8 +139,12 @@ async function poll() {
         console.log(`[inbox ${uid}] ${(msg.text ?? "").slice(0, 80)}`);
         const reply = (t: string) => sendMessage(uid, t);
         const ctx: Ctx = { from: { id: msg.from.id }, message: { text: msg.text }, reply };
-        if (msg.text.startsWith("/start")) await startHandler(ctx);
-        else if (msg.text === "/info") {
+        if (msg.text.startsWith("/start")) {
+          await sendMessage(uid, "Halo! Hubungkan dompet via Mini App atau kirim alamat wallet 0x... kamu, lalu strategi. Cth: 'Jual BNB ke USDC kalau < $450'.", webAppKeyboard());
+        } else if (msg.text === "/app") {
+          const kb = webAppKeyboard();
+          await sendMessage(uid, kb ? "Buka dompet OmniDegen:" : "Mini App belum diset (MINIAPP_URL kosong).", kb);
+        } else if (msg.text === "/info") {
           const w = getWallet(uid);
           if (!w) {
             await reply("Kirim alamat wallet 0x... dulu.");
