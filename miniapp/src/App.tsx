@@ -1,68 +1,33 @@
-import { useEffect, useState } from "react";
-import {
-  useAccount,
-  useBalance,
-  useReadContract,
-  useSwitchChain,
-  useWaitForTransactionReceipt,
-  useWriteContract,
-} from "wagmi";
+import { useEffect } from "react";
+import { useAccount, useBalance, useReadContract, useSwitchChain } from "wagmi";
 import { usePrivy, useWallets } from "@privy-io/react-auth";
-import { formatEther, parseEther } from "viem";
-import { BOT_URL, CHAIN, FAUCET, MUSDC, PRIVY_APP_ID, SCAN_TX, VAULT, WBNB } from "./config";
-import { WALLETS, openWalletApp } from "./wallets";
+import { parseEther } from "viem";
+import { CHAIN, FAUCET, MUSDC, PRIVY_APP_ID, VAULT, WBNB } from "./config";
 import { erc20Abi, wbnbAbi } from "./abi";
-import { inTelegram, initTelegram, shortAddr, tg } from "./telegram";
-
-function useTx() {
-  const { data: hash, error, isPending, writeContract } = useWriteContract();
-  const { isSuccess } = useWaitForTransactionReceipt({ hash });
-  return { hash, error, isPending, isSuccess, writeContract };
-}
-
-function Field({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="row">
-      <span className="label">{label}</span>
-      <span className="value">{value}</span>
-    </div>
-  );
-}
-
-// Dompet eksternal di webview Telegram tidak auto-buka saat tanda tangan,
-// jadi sediakan shortcut tap-to-open agar request terlihat.
-function WalletShortcuts() {
-  return (
-    <div aria-live="polite">
-      <p>Ketuk dompetmu untuk tanda tangan:</p>
-      <div className="chips">
-        {WALLETS.map((w) => (
-          <button key={w.id} type="button" className="chip" onClick={() => openWalletApp(w.scheme)}>
-            {w.label} →
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+import { inTelegram, initTelegram, tg } from "./telegram";
+import { useTx } from "./hooks/useTx";
+import StatusCard from "./components/StatusCard";
+import WrapCard from "./components/WrapCard";
+import ApproveCard from "./components/ApproveCard";
+import AlarmCard from "./components/AlarmCard";
+import { InfoTooltip, TooltipProvider } from "./components/ui/tooltip";
+import Button from "./components/ui/Button";
+import Notice from "./components/ui/Notice";
 
 export default function App() {
   const { ready, authenticated, login, logout } = usePrivy();
   const { wallets } = useWallets();
   const { address, chainId } = useAccount();
   const connected = authenticated && !!address;
-  // Dompet embedded tanda tangan di dalam modal Privy — tak perlu shortcut.
   const embedded = wallets.some((w) => w.walletClientType === "privy");
   const tele = inTelegram();
   const { switchChain, isPending: switching, error: switchError } = useSwitchChain();
   const wrongNet = connected && chainId !== CHAIN.id;
 
-  // otomatis pindah ke BSC testnet (dompet yang belum punya chain akan diminta menambahkannya)
   useEffect(() => {
     if (wrongNet) switchChain({ chainId: CHAIN.id });
   }, [wrongNet]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [wrapAmt, setWrapAmt] = useState("0.001");
-  const [capAmt, setCapAmt] = useState("0.001");
+
   const wrap = useTx();
   const appr = useTx();
 
@@ -82,18 +47,23 @@ export default function App() {
     }
   }, [wrap.isSuccess, appr.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fmt = (v: bigint | undefined) => (v === undefined ? "…" : formatEther(v));
   const readyTx = (allow.data ?? 0n) > 0n && (wbnb.data ?? 0n) > 0n;
 
-  const doWrap = () => {
+  const doWrap = (amt: string) => {
     try {
-      wrap.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "deposit", value: parseEther(wrapAmt) });
+      wrap.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "deposit", value: parseEther(amt) });
     } catch {
-      tg()?.showAlert("Nominal salah");
+      tg()?.showAlert("Nominal salah. Contoh: 0.001");
     }
   };
-  const doApprove = (amount: bigint) =>
-    appr.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "approve", args: [VAULT, amount] });
+  const doApprove = (cap: string) => {
+    try {
+      appr.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "approve", args: [VAULT, parseEther(cap)] });
+    } catch {
+      tg()?.showAlert("Nominal salah. Contoh: 0.001");
+    }
+  };
+  const doRevoke = () => appr.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "approve", args: [VAULT, 0n] });
 
   const copyAddress = () => {
     try {
@@ -106,125 +76,84 @@ export default function App() {
 
   if (!PRIVY_APP_ID) {
     return (
-      <div className="wrap">
-        <header>
-          <h1>🛡️ OmniDegen</h1>
-          <span className="badge">BSC Testnet</span>
+      <div className="mx-auto w-full max-w-[440px] px-4 py-4 pb-[calc(32px+env(safe-area-inset-bottom))]">
+        <a className="skip" href="#main">Lewati ke konten</a>
+        <header className="mb-3 flex items-center justify-between">
+          <h1>OmniDegen</h1>
+          <span className="badge">Testnet</span>
         </header>
-        <div className="card">
+        <main id="main" className="mb-[var(--space)] min-w-0 rounded-lg border border-border bg-card p-3">
           <p>VITE_PRIVY_APP_ID belum diisi. Buat app di dashboard Privy lalu isi di file .env miniapp.</p>
-        </div>
+        </main>
       </div>
     );
   }
 
   return (
-    <div className="wrap">
-      <header>
-        <h1>🛡️ OmniDegen</h1>
-        <span className="badge">BSC Testnet</span>
+    <TooltipProvider>
+    <div className="mx-auto w-full max-w-[440px] px-4 py-4 pb-[calc(32px+env(safe-area-inset-bottom))]">
+      <a className="skip" href="#main">Lewati ke konten</a>
+      <header className="mb-3 flex items-center justify-between">
+        <h1>OmniDegen</h1>
+        <span className="badge">Testnet</span>
       </header>
 
-      {wrongNet && (
-        <div className="card warn-card" aria-live="polite">
-          <p>Jaringan salah — pindah ke BSC Testnet untuk lanjut.</p>
-          <button className="btn primary" disabled={switching} onClick={() => switchChain({ chainId: CHAIN.id })}>
-            {switching ? "…" : "Pindah ke BSC Testnet"}
-          </button>
-          {switchError && (
-            <p className="err" aria-live="polite">
-              Dompet tidak merespons. Buka aplikasi dompetmu manual, pindah ke BSC Testnet (chain 97), lalu kembali.
-            </p>
-          )}
-        </div>
-      )}
+      <main id="main">
+        {wrongNet && (
+          <Notice tone="warning" aria-live="polite" aria-label="Jaringan salah">
+            <p>Jaringan salah — pindah ke BSC Testnet untuk lanjut.</p>
+            <Button variant="primary" type="button" disabled={switching} onClick={() => switchChain({ chainId: CHAIN.id })}>
+              {switching ? "Memindahkan…" : "Pindah ke BSC Testnet"}
+            </Button>
+            {switchError && (
+              <p className="err">Dompet tidak merespons. Buka aplikasi dompetmu manual, pindah ke BSC Testnet (chain 97), lalu kembali.</p>
+            )}
+          </Notice>
+        )}
 
-      {!ready ? (
-        <div className="card">
-          <p>Siapkan dompet…</p>
-        </div>
-      ) : !connected ? (
-        <div className="card">
-          <p>Hubungkan dompet untuk mulai. Private key tidak pernah keluar dari HP kamu.</p>
-          <button className="btn primary" onClick={() => login()}>
-            Connect Wallet
-          </button>
-          <p className="hint">
-            {tele
-              ? "Ketuk dompetmu → approve di aplikasinya → kembali ke sini."
-              : "HP: MetaMask / Trust / OKX."}
-          </p>
-        </div>
-      ) : wrongNet ? null : (
-        <>
-          <div className="card">
-            <div className="addr">
-              <code>{shortAddr(address)}</code>
-              <button className="link" onClick={copyAddress}>salin</button>
-              <button className="link" onClick={() => logout()}>keluar</button>
-            </div>
+        {!ready ? (
+          <Notice aria-live="polite">
+            <p>Siapkan dompet…</p>
+          </Notice>
+        ) : !connected ? (
+          <Notice aria-label="Hubungkan dompet">
+            <h2>Mulai</h2>
+            <p>Hubungkan dompet untuk mulai. Private key tidak pernah keluar dari HP kamu.</p>
+            <Button variant="primary" type="button" onClick={() => login()}>
+              Hubungkan Dompet
+            </Button>
+            <span className="connect-note">
+              <InfoTooltip>{tele ? "Ketuk dompetmu, approve di aplikasinya, lalu kembali ke sini." : "Di HP, gunakan MetaMask, Trust Wallet, atau OKX."}</InfoTooltip>
+            </span>
+          </Notice>
+        ) : wrongNet ? null : (
+          <>
+            <StatusCard
+              address={address!}
+              bnb={bnb.data?.value}
+              wbnb={wbnb.data as bigint | undefined}
+              musdc={musdc.data as bigint | undefined}
+              allowance={allow.data as bigint | undefined}
+              onCopy={copyAddress}
+              onLogout={() => logout()}
+            />
             {tele && embedded && (
-              <p className="hint">
-                Dompet otomatis di dalam app. Isi tBNB dulu: salin alamat → minta di{" "}
-                <a className="tx" href={FAUCET} target="_blank" rel="noreferrer">faucet BSC testnet →</a>{" "}
-                → kembali ke sini.
-              </p>
-            )}  <Field label="BNB dompet" value={bnb.data ? formatEther(bnb.data.value) : "…"} />
-            <Field label="WBNB" value={fmt(wbnb.data as bigint | undefined)} />
-            <Field label="mUSDC" value={fmt(musdc.data as bigint | undefined)} />
-            <Field label="Izin ke vault" value={`${fmt(allow.data as bigint | undefined)} WBNB`} />
-          </div>
-
-          <div className="card">
-            <h2>1 · Wrap BNB → WBNB</h2>
-            <div className="inline">
-              <input aria-label="Jumlah BNB untuk wrap" name="wrap-amount" autoComplete="off" value={wrapAmt} onChange={(e) => setWrapAmt(e.target.value)} inputMode="decimal" />
-              <button className="btn" disabled={wrap.isPending} onClick={doWrap}>
-                {wrap.isPending ? "…" : "Wrap"}
-              </button>
+              <Notice aria-label="Isi saldo testnet">
+                <a className="utility-link" href={FAUCET} target="_blank" rel="noreferrer">
+                  Isi tBNB di faucet <span aria-hidden="true">→</span>
+                </a>
+              </Notice>
+            )}
+            <div className="setup-flow" aria-label="Setup rescue">
+              <div className="flow-label">Rescue setup</div>
+              <WrapCard tx={wrap} embedded={embedded} onWrap={doWrap} complete={(wbnb.data ?? 0n) > 0n} />
+              <ApproveCard tx={appr} embedded={embedded} onApprove={doApprove} onRevoke={doRevoke} complete={(allow.data ?? 0n) > 0n} />
+              <AlarmCard ready={readyTx} />
             </div>
-            <div aria-live="polite">
-              {wrap.isPending && !embedded && <WalletShortcuts />}
-              {wrap.hash && <a className="tx" href={SCAN_TX(wrap.hash)} target="_blank" rel="noreferrer">lihat tx →</a>}
-              {wrap.error && <p className="err">gagal: {wrap.error.message.slice(0, 100)}</p>}
-            </div>
-          </div>
-
-          <div className="card">
-            <h2>2 · Approve vault (batas tarik)</h2>
-            <div className="inline">
-              <input aria-label="Batas approve WBNB" name="approve-cap" autoComplete="off" value={capAmt} onChange={(e) => setCapAmt(e.target.value)} inputMode="decimal" />
-              <button
-                className="btn"
-                disabled={appr.isPending}
-                onClick={() => {
-                  try {
-                    doApprove(parseEther(capAmt));
-                  } catch {
-                    tg()?.showAlert("Nominal salah");
-                  }
-                }}
-              >
-                {appr.isPending ? "…" : "Approve"}
-              </button>
-              <button className="btn ghost" disabled={appr.isPending} onClick={() => doApprove(0n)}>
-                Revoke
-              </button>
-            </div>
-            {appr.isPending && !embedded && <WalletShortcuts />}
-            {appr.hash && <a className="tx" href={SCAN_TX(appr.hash)} target="_blank" rel="noreferrer">lihat tx →</a>}
-            {appr.error && <p className="err" aria-live="polite">gagal: {appr.error.message.slice(0, 100)}</p>}
-          </div>
-
-          <div className="card">
-            <h2>3 · Pasang alarm di chat</h2>
-            <p className={readyTx ? "ok" : "warn"}>
-              {readyTx ? "✅ Siap rescue. Ketik strategi di chat bot." : "⚠️ Wrap + approve dulu agar rescue bisa jalan."}
-            </p>
-            <a className="btn primary" href={BOT_URL}>Buka chat bot →</a>
-          </div>
-        </>
-      )}
+          </>
+        )}
+      </main>
     </div>
+    </TooltipProvider>
   );
 }
