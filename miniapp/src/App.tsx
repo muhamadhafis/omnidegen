@@ -2,73 +2,22 @@ import { useEffect, useState } from "react";
 import {
   useAccount,
   useBalance,
-  useDisconnect,
   useReadContract,
   useSwitchChain,
   useWaitForTransactionReceipt,
   useWriteContract,
 } from "wagmi";
-import { useAppKit } from "@reown/appkit/react";
+import { usePrivy, useWallets } from "@privy-io/react-auth";
 import { formatEther, parseEther } from "viem";
-import { BOT_URL, CHAIN, MUSDC, SCAN_TX, VAULT, WBNB, appKit } from "./config";
+import { BOT_URL, CHAIN, FAUCET, MUSDC, PRIVY_APP_ID, SCAN_TX, VAULT, WBNB } from "./config";
 import { WALLETS, openWalletApp } from "./wallets";
 import { erc20Abi, wbnbAbi } from "./abi";
-import { initTelegram, shortAddr, tg } from "./telegram";
+import { inTelegram, initTelegram, shortAddr, tg } from "./telegram";
 
 function useTx() {
   const { data: hash, error, isPending, writeContract } = useWriteContract();
   const { isSuccess } = useWaitForTransactionReceipt({ hash });
   return { hash, error, isPending, isSuccess, writeContract };
-}
-
-// Pairing manual: untuk dompet yang modalnya tak memunculkan prompt
-// (kasus Trust di webview). Prefetch URI lalu deep-link langsung ke wallet.
-function ManualPair({ onDone }: { onDone: () => void }) {
-  const [uri, setUri] = useState<string>("");
-  useEffect(() => {
-    appKit.prefetchWalletConnectUri();
-    const read = () => {
-      const snap = appKit.getWalletConnectUri() as { uri?: string };
-      if (snap?.uri) setUri(snap.uri);
-    };
-    read();
-    const unsub = appKit.subscribeWalletConnectUri(read);
-    return () => {
-      unsub();
-      appKit.resetWalletConnectUri();
-    };
-  }, []);
-  const cancel = () => {
-    appKit.resetWalletConnectUri();
-    onDone();
-  };
-  return (
-    <div className="card" aria-live="polite">
-      <h2>Pairing manual</h2>
-      {!uri ? (
-        <p>Siapkan sesi…</p>
-      ) : (
-        <>
-          <p>Langkah: ketuk tombol dompetmu → approve di aplikasinya → kembali ke sini.</p>
-          <a className="btn primary" href={`https://link.trustwallet.com/wc?uri=${encodeURIComponent(uri)}`}>
-            Buka di Trust →
-          </a>
-          <button
-            className="btn"
-            onClick={() => {
-              navigator.clipboard?.writeText(uri).catch(() => {});
-              tg()?.showAlert("URI tersalin — paste di dompetmu (WalletConnect)");
-            }}
-          >
-            Salin URI pairing
-          </button>
-          <button className="btn ghost" onClick={cancel}>
-            Batal
-          </button>
-        </>
-      )}
-    </div>
-  );
 }
 
 function Field({ label, value }: { label: string; value: string }) {
@@ -80,8 +29,8 @@ function Field({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Saat tx pending di HP: webview tidak auto-buka dompet, jadi sediakan
-// shortcut tap-to-open per dompet agar request tanda tangan terlihat.
+// Dompet eksternal di webview Telegram tidak auto-buka saat tanda tangan,
+// jadi sediakan shortcut tap-to-open agar request terlihat.
 function WalletShortcuts() {
   return (
     <div aria-live="polite">
@@ -98,11 +47,15 @@ function WalletShortcuts() {
 }
 
 export default function App() {
-  const { address, isConnected, chainId } = useAccount();
-  const { open } = useAppKit();
-  const { disconnect } = useDisconnect();
+  const { ready, authenticated, login, logout } = usePrivy();
+  const { wallets } = useWallets();
+  const { address, chainId } = useAccount();
+  const connected = authenticated && !!address;
+  // Dompet embedded tanda tangan di dalam modal Privy — tak perlu shortcut.
+  const embedded = wallets.some((w) => w.walletClientType === "privy");
+  const tele = inTelegram();
   const { switchChain, isPending: switching, error: switchError } = useSwitchChain();
-  const wrongNet = isConnected && chainId !== CHAIN.id;
+  const wrongNet = connected && chainId !== CHAIN.id;
 
   // otomatis pindah ke BSC testnet (dompet yang belum punya chain akan diminta menambahkannya)
   useEffect(() => {
@@ -110,7 +63,6 @@ export default function App() {
   }, [wrongNet]); // eslint-disable-line react-hooks/exhaustive-deps
   const [wrapAmt, setWrapAmt] = useState("0.001");
   const [capAmt, setCapAmt] = useState("0.001");
-  const [manualPair, setManualPair] = useState(false);
   const wrap = useTx();
   const appr = useTx();
 
@@ -131,7 +83,7 @@ export default function App() {
   }, [wrap.isSuccess, appr.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fmt = (v: bigint | undefined) => (v === undefined ? "…" : formatEther(v));
-  const ready = (allow.data ?? 0n) > 0n && (wbnb.data ?? 0n) > 0n;
+  const readyTx = (allow.data ?? 0n) > 0n && (wbnb.data ?? 0n) > 0n;
 
   const doWrap = () => {
     try {
@@ -142,6 +94,29 @@ export default function App() {
   };
   const doApprove = (amount: bigint) =>
     appr.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "approve", args: [VAULT, amount] });
+
+  const copyAddress = () => {
+    try {
+      if (address) navigator.clipboard?.writeText(address).catch(() => {});
+    } catch { /* abaikan */ }
+    try {
+      tg()?.showAlert("Alamat tersalin — tempel di faucet untuk isi tBNB.");
+    } catch { /* abaikan */ }
+  };
+
+  if (!PRIVY_APP_ID) {
+    return (
+      <div className="wrap">
+        <header>
+          <h1>🛡️ OmniDegen</h1>
+          <span className="badge">BSC Testnet</span>
+        </header>
+        <div className="card">
+          <p>VITE_PRIVY_APP_ID belum diisi. Buat app di dashboard Privy lalu isi di file .env miniapp.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="wrap">
@@ -164,29 +139,37 @@ export default function App() {
         </div>
       )}
 
-      {!isConnected ? (
-        manualPair ? (
-          <ManualPair onDone={() => setManualPair(false)} />
-        ) : (
-          <div className="card">
-            <p>Hubungkan dompet untuk mulai. Private key tidak pernah keluar dari HP kamu.</p>
-            <button className="btn primary" onClick={() => open()}>
-              Connect Wallet
-            </button>
-            <p className="hint">HP: MetaMask / Trust / OKX. Rabby hanya di desktop (tidak dukung BSC testnet via WalletConnect).</p>
-            <button className="link" onClick={() => setManualPair(true)}>
-              Prompt tidak muncul? Pairing manual →
-            </button>
-          </div>
-        )
+      {!ready ? (
+        <div className="card">
+          <p>Siapkan dompet…</p>
+        </div>
+      ) : !connected ? (
+        <div className="card">
+          <p>Hubungkan dompet untuk mulai. Private key tidak pernah keluar dari HP kamu.</p>
+          <button className="btn primary" onClick={() => login()}>
+            Connect Wallet
+          </button>
+          <p className="hint">
+            {tele
+              ? "Ketuk dompetmu → approve di aplikasinya → kembali ke sini."
+              : "HP: MetaMask / Trust / OKX."}
+          </p>
+        </div>
       ) : wrongNet ? null : (
         <>
           <div className="card">
             <div className="addr">
               <code>{shortAddr(address)}</code>
-              <button className="link" onClick={() => disconnect()}>putus</button>
+              <button className="link" onClick={copyAddress}>salin</button>
+              <button className="link" onClick={() => logout()}>keluar</button>
             </div>
-            <Field label="BNB dompet" value={bnb.data ? formatEther(bnb.data.value) : "…"} />
+            {tele && embedded && (
+              <p className="hint">
+                Dompet otomatis di dalam app. Isi tBNB dulu: salin alamat → minta di{" "}
+                <a className="tx" href={FAUCET} target="_blank" rel="noreferrer">faucet BSC testnet →</a>{" "}
+                → kembali ke sini.
+              </p>
+            )}  <Field label="BNB dompet" value={bnb.data ? formatEther(bnb.data.value) : "…"} />
             <Field label="WBNB" value={fmt(wbnb.data as bigint | undefined)} />
             <Field label="mUSDC" value={fmt(musdc.data as bigint | undefined)} />
             <Field label="Izin ke vault" value={`${fmt(allow.data as bigint | undefined)} WBNB`} />
@@ -201,7 +184,7 @@ export default function App() {
               </button>
             </div>
             <div aria-live="polite">
-              {wrap.isPending && <WalletShortcuts />}
+              {wrap.isPending && !embedded && <WalletShortcuts />}
               {wrap.hash && <a className="tx" href={SCAN_TX(wrap.hash)} target="_blank" rel="noreferrer">lihat tx →</a>}
               {wrap.error && <p className="err">gagal: {wrap.error.message.slice(0, 100)}</p>}
             </div>
@@ -228,15 +211,15 @@ export default function App() {
                 Revoke
               </button>
             </div>
-            {appr.isPending && <WalletShortcuts />}
+            {appr.isPending && !embedded && <WalletShortcuts />}
             {appr.hash && <a className="tx" href={SCAN_TX(appr.hash)} target="_blank" rel="noreferrer">lihat tx →</a>}
             {appr.error && <p className="err" aria-live="polite">gagal: {appr.error.message.slice(0, 100)}</p>}
           </div>
 
           <div className="card">
             <h2>3 · Pasang alarm di chat</h2>
-            <p className={ready ? "ok" : "warn"}>
-              {ready ? "✅ Siap rescue. Ketik strategi di chat bot." : "⚠️ Wrap + approve dulu agar rescue bisa jalan."}
+            <p className={readyTx ? "ok" : "warn"}>
+              {readyTx ? "✅ Siap rescue. Ketik strategi di chat bot." : "⚠️ Wrap + approve dulu agar rescue bisa jalan."}
             </p>
             <a className="btn primary" href={BOT_URL}>Buka chat bot →</a>
           </div>

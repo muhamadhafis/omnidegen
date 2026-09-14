@@ -1,19 +1,27 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { WagmiProvider } from "wagmi";
+import { PrivyProvider } from "@privy-io/react-auth";
+import { WagmiProvider } from "@privy-io/wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import "./index.css";
 import App from "./App.tsx";
-import { wagmiAdapter } from "./config.ts";
+import { PRIVY_APP_ID, privyConfig, wagmiConfig } from "./config.ts";
+import { patchCustomSchemeOpen } from "./telegram.ts";
+
+// Tanpa syarat: di browser biasa patch ini no-op untuk link https,
+// di webview Telegram ia yang mencegah ERR_UNKNOWN_URL_SCHEME.
+patchCustomSchemeOpen();
 
 const queryClient = new QueryClient();
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <WagmiProvider config={wagmiAdapter.wagmiConfig}>
+    <PrivyProvider appId={PRIVY_APP_ID} config={privyConfig}>
       <QueryClientProvider client={queryClient}>
-        <App />
+        <WagmiProvider config={wagmiConfig}>
+          <App />
+        </WagmiProvider>
       </QueryClientProvider>
-    </WagmiProvider>
+    </PrivyProvider>
   </StrictMode>,
 );
