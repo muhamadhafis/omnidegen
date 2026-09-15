@@ -1,3 +1,5 @@
+import { BOT_URL } from "./config";
+
 // Minimal Telegram WebApp binding (tanpa dep tambahan).
 export function tg(): any {
   return (window as any)?.Telegram?.WebApp;
@@ -29,6 +31,23 @@ export function inTelegram(): boolean {
   } catch {
     return false;
   }
+}
+
+export function openBot(): boolean {
+  try {
+    const w = tg();
+    if (w?.openTelegramLink) {
+      w.openTelegramLink(BOT_URL);
+      return true;
+    }
+    if (w?.openLink) {
+      w.openLink(BOT_URL);
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
 }
 
 // Webview Telegram mati (ERR_UNKNOWN_URL_SCHEME) kalau ada navigasi top-level

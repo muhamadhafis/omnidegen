@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { SCAN_TX } from "../config";
-import { tg } from "../telegram";
 import type { TxHandle } from "../hooks/useTx";
 import WalletShortcuts from "./WalletShortcuts";
-import Icon from "./Icon";
 import { InfoTooltip } from "./ui/tooltip";
 import Button from "./ui/Button";
 import Input from "./ui/Input";
+import { ExternalLink, ShieldCheck, ShieldOff } from "lucide-react";
 
 type Props = {
   tx: TxHandle;
@@ -16,8 +15,6 @@ type Props = {
 };
 
 function confirmRevoke(): Promise<boolean> {
-  const w = tg();
-  if (w?.showConfirm) return new Promise((res) => w.showConfirm("Cabut izin vault? Rescue berhenti sampai approve lagi.", res));
   return Promise.resolve(window.confirm("Cabut izin vault? Rescue berhenti sampai approve lagi."));
 }
 
@@ -48,14 +45,14 @@ export default function ApproveCard({ tx, embedded, onApprove, onRevoke, complet
           onChange={(e) => setCap(e.target.value)}
           placeholder="0.001…"
         />
-        <Button type="button" className="action-button" disabled={tx.isPending} onClick={() => onApprove(cap)}>
-          <Icon name="shield" />
+        <Button type="button" className="gap-2 action-button" disabled={tx.isPending} onClick={() => onApprove(cap)}>
+          <ShieldCheck aria-hidden="true" size={16} strokeWidth={1.8} />
           {tx.isPending ? "Memproses…" : complete ? "Sudah di-approve" : "Approve Vault"}
         </Button>
         <Button
           type="button"
           variant="ghost"
-          className="action-button"
+          className="gap-2 action-button"
           disabled={tx.isPending || asking}
           onClick={async () => {
             setAsking(true);
@@ -66,7 +63,7 @@ export default function ApproveCard({ tx, embedded, onApprove, onRevoke, complet
             }
           }}
         >
-          <Icon name="revoke" />
+          <ShieldOff aria-hidden="true" size={16} strokeWidth={1.8} />
           {asking ? "…" : "Cabut Izin"}
         </Button>
       </div>
@@ -74,7 +71,7 @@ export default function ApproveCard({ tx, embedded, onApprove, onRevoke, complet
         {tx.isPending && !embedded && <WalletShortcuts />}
         {tx.hash && (
           <a className="tx" href={SCAN_TX(tx.hash)} target="_blank" rel="noreferrer">
-            Lihat Tx <Icon name="external" size={14} />
+            Lihat Tx <ExternalLink aria-hidden="true" size={14} strokeWidth={1.8} />
           </a>
         )}
         {tx.error && (

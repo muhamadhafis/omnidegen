@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { SCAN_TX } from "../config";
 import type { TxHandle } from "../hooks/useTx";
 import WalletShortcuts from "./WalletShortcuts";
-import Icon from "./Icon";
 import { InfoTooltip } from "./ui/tooltip";
 import Button from "./ui/Button";
 import Input from "./ui/Input";
+import { ExternalLink, RefreshCw } from "lucide-react";
 
 type Props = { tx: TxHandle; embedded: boolean; onWrap: (amt: string) => void };
 
@@ -35,8 +35,8 @@ export default function WrapCard({ tx, embedded, onWrap, complete = false }: Pro
           onChange={(e) => setAmt(e.target.value)}
           placeholder="0.001…"
         />
-        <Button type="button" className="action-button" disabled={tx.isPending} onClick={() => onWrap(amt)}>
-          <Icon name="wrap" />
+        <Button type="button" className="gap-2 action-button" disabled={tx.isPending} onClick={() => onWrap(amt)}>
+          <RefreshCw aria-hidden="true" size={16} strokeWidth={1.8} />
           {tx.isPending ? "Memproses…" : complete ? "Sudah di-wrap" : "Wrap BNB"}
         </Button>
       </div>
@@ -44,7 +44,7 @@ export default function WrapCard({ tx, embedded, onWrap, complete = false }: Pro
         {tx.isPending && !embedded && <WalletShortcuts />}
         {tx.hash && (
           <a className="tx" href={SCAN_TX(tx.hash)} target="_blank" rel="noreferrer">
-            Lihat Tx <Icon name="external" size={14} />
+            Lihat Tx <ExternalLink aria-hidden="true" size={14} strokeWidth={1.8} />
           </a>
         )}
         {tx.error && (

@@ -1,7 +1,7 @@
 import { shortAddr } from "../telegram";
 import { fmtBnb, fmtToken } from "../lib/format";
-import Icon from "./Icon";
 import { InfoTooltip } from "./ui/tooltip";
+import { Clipboard, LogOut } from "lucide-react";
 import Surface from "./ui/Surface";
 import StatusBadge from "./ui/StatusBadge";
 
@@ -36,10 +36,10 @@ export default function StatusCard({ address, bnb, wbnb, musdc, allowance, onCop
         </div>
         <span className="addr-actions">
           <button type="button" className="icon-button" onClick={onCopy} aria-label="Salin alamat wallet" title="Salin alamat wallet">
-            <Icon name="copy" />
+            <Clipboard aria-hidden="true" size={16} strokeWidth={1.8} />
           </button>
           <button type="button" className="icon-button" onClick={onLogout} aria-label="Keluar dari wallet" title="Keluar dari wallet">
-            <Icon name="logout" />
+            <LogOut aria-hidden="true" size={16} strokeWidth={1.8} />
           </button>
         </span>
       </div>

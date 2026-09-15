@@ -1,6 +1,7 @@
-import { BOT_URL } from "../config";
-import Icon from "./Icon";
+import { MessageCircle } from "lucide-react";
+import { openBot } from "../telegram";
 import { InfoTooltip } from "./ui/tooltip";
+import Button from "./ui/Button";
 
 export default function AlarmCard({ ready }: { ready: boolean }) {
   return (
@@ -10,20 +11,18 @@ export default function AlarmCard({ ready }: { ready: boolean }) {
         <h2>Alarm <InfoTooltip>Setelah siap, tulis strategi seperti “jual BNB ke USDC kalau turun di bawah 450” di bot.</InfoTooltip></h2>
       </div>
       <div className="flex flex-col gap-2">
-        <p className={ready ? "ok" : "warn"} aria-live="polite">
-          {ready ? "Siap" : "Terkunci · wrap + approve dulu"}
-        </p>
-        <a
-          className="w-full rounded-md border border-accent bg-accent px-[13px] py-2.5 text-center text-[15px] font-semibold text-accent-foreground transition-[transform,filter] duration-150 hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent active:translate-y-px"
-          href={ready ? BOT_URL : undefined}
-          aria-disabled={!ready}
-          onClick={(event) => {
-            if (!ready) event.preventDefault();
+        <Button
+          className="gap-2"
+          variant="primary"
+          type="button"
+          disabled={!ready}
+          onClick={() => {
+            if (ready) openBot();
           }}
         >
-          <Icon name="chat" />
+          <MessageCircle aria-hidden="true" size={16} strokeWidth={1.8} />
           Buka Chat Bot
-        </a>
+        </Button>
       </div>
     </section>
   );

@@ -10,7 +10,6 @@ import StatusCard from "./components/StatusCard";
 import WrapCard from "./components/WrapCard";
 import ApproveCard from "./components/ApproveCard";
 import AlarmCard from "./components/AlarmCard";
-import { InfoTooltip, TooltipProvider } from "./components/ui/tooltip";
 import Button from "./components/ui/Button";
 import Notice from "./components/ui/Notice";
 
@@ -90,7 +89,6 @@ export default function App() {
   }
 
   return (
-    <TooltipProvider>
     <div className="mx-auto w-full max-w-[440px] px-4 py-4 pb-[calc(32px+env(safe-area-inset-bottom))]">
       <a className="skip" href="#main">Lewati ke konten</a>
       <header className="mb-3 flex items-center justify-between">
@@ -116,15 +114,10 @@ export default function App() {
             <p>Siapkan dompet…</p>
           </Notice>
         ) : !connected ? (
-          <Notice aria-label="Hubungkan dompet">
-            <h2>Mulai</h2>
-            <p>Hubungkan dompet untuk mulai. Private key tidak pernah keluar dari HP kamu.</p>
+          <Notice aria-label="Hubungkan dompet" className="gap-2">
             <Button variant="primary" type="button" onClick={() => login()}>
               Hubungkan Dompet
             </Button>
-            <span className="connect-note">
-              <InfoTooltip>{tele ? "Ketuk dompetmu, approve di aplikasinya, lalu kembali ke sini." : "Di HP, gunakan MetaMask, Trust Wallet, atau OKX."}</InfoTooltip>
-            </span>
           </Notice>
         ) : wrongNet ? null : (
           <>
@@ -154,6 +147,5 @@ export default function App() {
         )}
       </main>
     </div>
-    </TooltipProvider>
   );
 }

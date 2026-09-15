@@ -273,45 +273,6 @@ a:focus-visible {
   transform: translateY(1px);
 }
 
-.tooltip-wrap {
-  display: inline-flex;
-  vertical-align: middle;
-}
-
-.tooltip {
-  position: fixed;
-  z-index: 10;
-  width: 240px;
-  max-width: calc(100vw - 24px);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: #1a1a1a;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
-  color: var(--text);
-  padding: 9px 10px;
-  font-size: 12px;
-  line-height: 1.4;
-  opacity: 0;
-  pointer-events: none;
-  transform: translateY(4px);
-  transition: opacity 120ms ease, transform 120ms ease;
-}
-
-.tooltip.is-above {
-  transform: translateY(calc(-100% - 4px));
-}
-
-.tooltip-wrap:hover .tooltip,
-.tooltip.is-open {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.tooltip-wrap:hover .tooltip.is-above,
-.tooltip.is-above.is-open {
-  transform: translateY(-100%);
-}
-
 .action-row .ui-button {
   flex: 0 0 auto;
   white-space: nowrap;
@@ -379,7 +340,7 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
-@media (max-width: 380px) {
+@media (max-width: 280px) {
   .wallet-header {
     align-items: flex-start;
     flex-direction: column;
