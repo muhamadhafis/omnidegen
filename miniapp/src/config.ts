@@ -33,7 +33,6 @@ export const privyConfig = {
   loginMethods: ["wallet"] as ["wallet"],
   supportedChains: [bscTestnet],
   defaultChain: bscTestnet,
-  embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" as const } },
   appearance: {
     theme: "dark" as const,
     ...(inTelegram()

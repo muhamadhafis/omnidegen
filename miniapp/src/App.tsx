@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { useAccount, useBalance, useReadContract, useSwitchChain } from "wagmi";
+import { useAccount, useBalance, useDisconnect, useReadContract, useSwitchChain } from "wagmi";
 import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
+import { useSetActiveWallet } from "@privy-io/wagmi";
 import { parseEther } from "viem";
 import { API_URL, CHAIN, FAUCET, MUSDC, PRIVY_APP_ID, VAULT, WBNB } from "./config";
 import { erc20Abi, wbnbAbi } from "./abi";
@@ -20,10 +21,10 @@ export default function App() {
   const { ready, authenticated, logout } = usePrivy();
   const { wallets } = useWallets();
   const { address, chainId } = useAccount();
-  const connected = authenticated && !!address;
-  const embedded = wallets.some((w) => w.walletClientType === "privy");
+  const connected = !!address;
   const tele = inTelegram();
   const { switchChain, isPending: switching, error: switchError } = useSwitchChain();
+  const { disconnect } = useDisconnect();
   const wrongNet = connected && chainId !== CHAIN.id;
 
   const [linkStatus, setLinkStatus] = useState<"idle" | "linking" | "linked" | "error">("idle");
@@ -32,11 +33,12 @@ export default function App() {
   const [connectError, setConnectError] = useState<string | null>(null);
   const connectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const { setActiveWallet } = useSetActiveWallet();
   const { connectWallet } = useConnectWallet({
-    onSuccess: () => {
+    onSuccess: ({ wallet }) => {
       if (connectTimer.current) clearTimeout(connectTimer.current);
       setConnecting(false);
-      dlog("connect: onSuccess (lanjut SIWE/address)");
+      dlog(`connect: onSuccess wallet=${wallet.address} type=${wallet.walletClientType}`);
     },
     onError: (error) => {
       if (connectTimer.current) clearTimeout(connectTimer.current);
@@ -76,6 +78,20 @@ export default function App() {
       dlog(`wallet: address=${address ?? "-"} chainId=${chainId ?? "?"} auth=${authenticated}`);
     }
   }, [address, chainId, authenticated]);
+  useEffect(() => {
+    if (wallets.length > 1) dlog(`wallets: ${wallets.length} terhubung (${wallets.map((w) => w.walletClientType).join(",")})`);
+  }, [wallets]);
+  // Satu dompet eksternal sebagai aktif — sembuhkan ambiguitas bila user lama
+  // masih punya embedded ter-link. Sekali per address (ref guard, anti-loop).
+  const activatedRef = useRef("");
+  useEffect(() => {
+    const ext = wallets.find((w) => w.walletClientType !== "privy");
+    if (connected && ext && activatedRef.current !== ext.address) {
+      activatedRef.current = ext.address;
+      dlog(`active-wallet: set ${ext.address}`);
+      setActiveWallet(ext).catch((e) => dlog(`active-wallet: gagal (${e instanceof Error ? e.message : "?"})`));
+    }
+  }, [wallets, connected, setActiveWallet]);
 
   // ponytail: debug sementara (?debug=1); hapus setelah diagnosa connect selesai
   const [logs, setLogs] = useState<LogEntry[]>([]);
@@ -168,6 +184,27 @@ export default function App() {
   };
   const doRevoke = () => appr.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "approve", args: [VAULT, 0n] });
 
+  // Logout harus memutus DUA sesi: konektor wagmi (yang menggerakkan `address`
+  // dan seluruh UI) + sesi Privy. Tanpa disconnect, address bertahan dan UI
+  // terlihat tidak berubah ("logout tidak berfungsi").
+  const handleLogout = () => {
+    dlog("logout: tap Keluar");
+    try {
+      disconnect();
+    } catch (e) {
+      dlog(`logout: disconnect gagal (${e instanceof Error ? e.message : "?"})`);
+    }
+    logout().catch((e) => dlog(`logout: privy gagal (${e instanceof Error ? e.message : "?"})`));
+    if (connectTimer.current) clearTimeout(connectTimer.current);
+    setConnecting(false);
+    setConnectError(null);
+    setLinkStatus("idle");
+    setLinkError(null);
+    activatedRef.current = "";
+    prevWallet.current = "";
+    dlog("logout: state lokal direset");
+  };
+
   const copyAddress = () => {
     try {
       if (address) navigator.clipboard?.writeText(address).catch(() => {});
@@ -231,6 +268,9 @@ export default function App() {
           </Notice>
         ) : !connected ? (
           <Notice aria-label="Hubungkan dompet" className="gap-2">
+            {!tele && (
+              <p className="muted">Aktifkan satu extension dompet (MetaMask ATAU Rabby) agar tidak konflik.</p>
+            )}
             <Button variant="primary" type="button" disabled={connecting} onClick={startConnect}>
               {connecting ? "Menghubungkan…" : "Hubungkan Dompet"}
             </Button>
@@ -263,9 +303,9 @@ export default function App() {
               musdc={musdc.data as bigint | undefined}
               allowance={allow.data as bigint | undefined}
               onCopy={copyAddress}
-              onLogout={() => logout()}
+              onLogout={handleLogout}
             />
-            {tele && embedded && (
+            {tele && (
               <Notice aria-label="Isi saldo testnet">
                 <a className="utility-link" href={FAUCET} target="_blank" rel="noreferrer">
                   Isi tBNB di faucet <span aria-hidden="true">→</span>
@@ -296,8 +336,8 @@ export default function App() {
             )}
             <div className="setup-flow" aria-label="Setup rescue">
               <div className="flow-label">Rescue setup</div>
-              <WrapCard tx={wrap} embedded={embedded} onWrap={doWrap} complete={(wbnb.data ?? 0n) > 0n} />
-              <ApproveCard tx={appr} embedded={embedded} onApprove={doApprove} onRevoke={doRevoke} complete={(allow.data ?? 0n) > 0n} />
+              <WrapCard tx={wrap} onWrap={doWrap} complete={(wbnb.data ?? 0n) > 0n} />
+              <ApproveCard tx={appr} onApprove={doApprove} onRevoke={doRevoke} complete={(allow.data ?? 0n) > 0n} />
               <AlarmCard ready={readyTx} />
             </div>
             {tele && address && telegramInitData() && (

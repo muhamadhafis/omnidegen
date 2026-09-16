@@ -9,7 +9,6 @@ import { ExternalLink, ShieldCheck, ShieldOff } from "lucide-react";
 
 type Props = {
   tx: TxHandle;
-  embedded: boolean;
   onApprove: (cap: string) => void;
   onRevoke: () => void;
 };
@@ -18,7 +17,7 @@ function confirmRevoke(): Promise<boolean> {
   return Promise.resolve(window.confirm("Cabut izin vault? Rescue berhenti sampai approve lagi."));
 }
 
-export default function ApproveCard({ tx, embedded, onApprove, onRevoke, complete = false }: Props & { complete?: boolean }) {
+export default function ApproveCard({ tx, onApprove, onRevoke, complete = false }: Props & { complete?: boolean }) {
   const [cap, setCap] = useState("0.001");
   const [asking, setAsking] = useState(false);
   const errRef = useRef<HTMLParagraphElement>(null);
@@ -68,7 +67,7 @@ export default function ApproveCard({ tx, embedded, onApprove, onRevoke, complet
         </Button>
       </div>
       <div aria-live="polite">
-        {tx.isPending && !embedded && <WalletShortcuts />}
+        {tx.isPending && <WalletShortcuts />}
         {tx.hash && (
           <a className="tx" href={SCAN_TX(tx.hash)} target="_blank" rel="noreferrer">
             Lihat Tx <ExternalLink aria-hidden="true" size={14} strokeWidth={1.8} />

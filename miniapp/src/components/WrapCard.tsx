@@ -7,9 +7,9 @@ import Button from "./ui/Button";
 import Input from "./ui/Input";
 import { ExternalLink, RefreshCw } from "lucide-react";
 
-type Props = { tx: TxHandle; embedded: boolean; onWrap: (amt: string) => void };
+type Props = { tx: TxHandle; onWrap: (amt: string) => void };
 
-export default function WrapCard({ tx, embedded, onWrap, complete = false }: Props & { complete?: boolean }) {
+export default function WrapCard({ tx, onWrap, complete = false }: Props & { complete?: boolean }) {
   const [amt, setAmt] = useState("0.001");
   const errRef = useRef<HTMLParagraphElement>(null);
 
@@ -41,7 +41,7 @@ export default function WrapCard({ tx, embedded, onWrap, complete = false }: Pro
         </Button>
       </div>
       <div aria-live="polite">
-        {tx.isPending && !embedded && <WalletShortcuts />}
+        {tx.isPending && <WalletShortcuts />}
         {tx.hash && (
           <a className="tx" href={SCAN_TX(tx.hash)} target="_blank" rel="noreferrer">
             Lihat Tx <ExternalLink aria-hidden="true" size={14} strokeWidth={1.8} />
