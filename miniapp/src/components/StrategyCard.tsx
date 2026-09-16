@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { API_URL } from "../config";
+import { API_URL, apiHeaders } from "../config";
 import { inTelegram } from "../telegram";
 import Button from "./ui/Button";
 import Surface from "./ui/Surface";
@@ -27,7 +27,7 @@ export default function StrategyCard({ initData }: { initData: string }) {
     }
     try {
       const res = await fetch(`${API_URL}/api/me`, {
-        headers: { "x-telegram-init-data": initData },
+        headers: apiHeaders({ "x-telegram-init-data": initData }),
       });
       if (!res.ok) throw new Error("Gagal memuat strategi");
       const data = await res.json();
@@ -48,7 +48,7 @@ export default function StrategyCard({ initData }: { initData: string }) {
     try {
       const res = await fetch(`${API_URL}/api/intents/${id}/cancel`, {
         method: "POST",
-        headers: { "x-telegram-init-data": initData },
+        headers: apiHeaders({ "x-telegram-init-data": initData }),
       });
       if (!res.ok) throw new Error("Gagal membatalkan");
       await fetchStrategies();

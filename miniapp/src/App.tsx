@@ -3,7 +3,7 @@ import { useAccount, useBalance, useDisconnect, useReadContract, useSwitchChain 
 import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSetActiveWallet } from "@privy-io/wagmi";
 import { parseEther } from "viem";
-import { API_URL, CHAIN, FAUCET, MUSDC, PRIVY_APP_ID, VAULT, WBNB } from "./config";
+import { API_URL, apiHeaders, CHAIN, FAUCET, MUSDC, PRIVY_APP_ID, VAULT, WBNB } from "./config";
 import { erc20Abi, wbnbAbi } from "./abi";
 import { inTelegram, initTelegram, telegramInitData, tg } from "./telegram";
 import { dlog, getLogs, subscribeLogs, type LogEntry } from "./debug-log";
@@ -151,7 +151,7 @@ export default function App() {
     dlog(`link-wallet: POST ${API_URL}/api/link-wallet wallet=${address}`);
     fetch(`${API_URL}/api/link-wallet`, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: apiHeaders({ "content-type": "application/json" }),
       body: JSON.stringify({ initData, wallet: address }),
     })
       .then(async (res) => {

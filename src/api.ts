@@ -25,7 +25,7 @@ async function sendTelegramMessage(chatId: string, text: string) {
 
 function corsHeaders(origin: string | null) {
   return {
-    "access-control-allow-headers": "content-type",
+    "access-control-allow-headers": "content-type, x-telegram-init-data, skip_zrok_interstitial",
     "access-control-allow-methods": "POST, OPTIONS, GET",
     ...(origin && getAllowedOrigin() && origin === getAllowedOrigin() ? { "access-control-allow-origin": origin } : {}),
     "content-type": "application/json",

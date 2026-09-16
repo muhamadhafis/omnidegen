@@ -13,6 +13,11 @@ export const SCAN_TX = (h: string) => `https://testnet.bscscan.com/tx/${h}`;
 export const CHAIN = bscTestnet;
 export const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID ?? "";
 export const API_URL = import.meta.env.VITE_API_URL ?? "";
+// Bypass interstitial zrok agar fetch API langsung dapat JSON (bukan halaman gate).
+export const apiHeaders = (extra: Record<string, string> = {}) => ({
+  "skip_zrok_interstitial": "1",
+  ...extra,
+});
 // Wajib di webview Telegram: tanpa ini Privy buka dompet via scheme mentah
 // (metamask://…) yang membunuh Mini App (ERR_UNKNOWN_URL_SCHEME).
 // Dengan ini koneksi lewat relay WalletConnect + universal link https.
