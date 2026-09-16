@@ -15,6 +15,12 @@ export type IntentInput = {
 };
 
 const SCHEMA = `
+  CREATE TABLE IF NOT EXISTS users (
+    telegram_user_id TEXT PRIMARY KEY,
+    wallet_address TEXT NOT NULL,
+    linked_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
   CREATE TABLE IF NOT EXISTS intents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
@@ -37,6 +43,20 @@ export function createDb(path = ":memory:") {
 
 // ponytail: file sqlite, migrasi ke postgres kalau user >1k / concurrent write
 export const db = createDb(process.env.DB_PATH ?? "omnidegen.sqlite");
+
+export function saveUserWallet(telegramUserId: string, walletAddress: string, conn: Database = db) {
+  if (!telegramUserId || !/^0x[0-9a-fA-F]{40}$/.test(walletAddress)) throw new Error("bad wallet");
+  conn.query(`
+    INSERT INTO users (telegram_user_id, wallet_address)
+    VALUES ($uid, $wallet)
+    ON CONFLICT(telegram_user_id) DO UPDATE SET wallet_address=$wallet, updated_at=CURRENT_TIMESTAMP
+  `).run({ $uid: telegramUserId, $wallet: walletAddress });
+}
+
+export function getUserWallet(telegramUserId: string, conn: Database = db): string | undefined {
+  const row = conn.query(`SELECT wallet_address FROM users WHERE telegram_user_id=$uid`).get({ $uid: telegramUserId }) as { wallet_address?: string } | null;
+  return row?.wallet_address;
+}
 
 export function saveIntent(input: IntentInput, conn: Database = db): number {
   const asset = input.asset.toUpperCase();

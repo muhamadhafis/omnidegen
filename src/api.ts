@@ -1,0 +1,114 @@
+import { saveUserWallet, getUserWallet, getActiveIntents, updateIntentStatus } from "./db";
+import { verifyTelegramInitData } from "./telegram-auth";
+
+const getAllowedOrigin = () => process.env.MINIAPP_ORIGIN ?? "";
+const token = () => process.env.TELEGRAM_BOT_TOKEN ?? "dummy";
+const apiUrl = (m: string) => `https://api.telegram.org/bot${token()}/${m}`;
+
+const stamp = () => new Date().toISOString().slice(11, 19);
+function log(...a: unknown[]) {
+  console.log(`[api ${stamp()}]`, ...a);
+}
+
+async function sendTelegramMessage(chatId: string, text: string) {
+  try {
+    const r: any = await fetch(apiUrl("sendMessage"), {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text }),
+    }).then((r) => r.json());
+    if (!r.ok) log(`notify ${chatId} GAGAL:`, JSON.stringify(r).slice(0, 160));
+  } catch (e) {
+    log(`notify ${chatId} ERROR:`, e instanceof Error ? e.message : "?");
+  }
+}
+
+function corsHeaders(origin: string | null) {
+  return {
+    "access-control-allow-headers": "content-type",
+    "access-control-allow-methods": "POST, OPTIONS, GET",
+    ...(origin && getAllowedOrigin() && origin === getAllowedOrigin() ? { "access-control-allow-origin": origin } : {}),
+    "content-type": "application/json",
+  };
+}
+
+function requireAuth(req: Request): string {
+  const initData = req.headers.get("x-telegram-init-data") ?? "";
+  if (!initData) throw new Error("missing initData");
+  return verifyTelegramInitData(initData, process.env.TELEGRAM_BOT_TOKEN ?? "");
+}
+
+export function createApiHandler() {
+  return async function handler(req: Request) {
+    const origin = req.headers.get("origin");
+    if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
+    const url = new URL(req.url);
+    const path = url.pathname;
+
+    if (path === "/api/link-wallet" && req.method === "POST") {
+      if (getAllowedOrigin() && origin !== getAllowedOrigin()) {
+        log(`POST /api/link-wallet → 403 origin=${origin ?? "-"}`);
+        return Response.json({ error: "origin forbidden" }, { status: 403 });
+      }
+      try {
+        const body = await req.json() as { initData?: string; wallet?: string };
+        const userId = verifyTelegramInitData(body.initData ?? "", process.env.TELEGRAM_BOT_TOKEN ?? "");
+        saveUserWallet(userId, body.wallet ?? "");
+        log(`POST /api/link-wallet → 200 user=${userId} wallet=${body.wallet ?? ""}`);
+        sendTelegramMessage(userId, "✅ Wallet tersinkron dengan bot. Sekarang kamu bisa kirim strategi via chat.");
+        return Response.json({ ok: true }, { headers: corsHeaders(origin) });
+      } catch (error) {
+        log(`POST /api/link-wallet → 400 err=${error instanceof Error ? error.message : "?"}`);
+        return Response.json({ error: error instanceof Error ? error.message : "bad request" }, { status: 400, headers: corsHeaders(origin) });
+      }
+    }
+
+    if (path === "/api/me" && req.method === "GET") {
+      try {
+        const userId = requireAuth(req);
+        const wallet = getUserWallet(userId);
+        if (!wallet) {
+          log(`GET /api/me → 404 user=${userId} (belum link)`);
+          return Response.json({ error: "wallet not linked" }, { status: 404, headers: corsHeaders(origin) });
+        }
+        const intents = getActiveIntents().filter((i: any) => i.user_id === userId);
+        log(`GET /api/me → 200 user=${userId} intents=${intents.length}`);
+        return Response.json({ wallet, intents }, { headers: corsHeaders(origin) });
+      } catch (error) {
+        log(`GET /api/me → 401 err=${error instanceof Error ? error.message : "?"}`);
+        return Response.json({ error: error instanceof Error ? error.message : "unauthorized" }, { status: 401, headers: corsHeaders(origin) });
+      }
+    }
+
+    if (path.startsWith("/api/intents/") && path.endsWith("/cancel") && req.method === "POST") {
+      try {
+        const userId = requireAuth(req);
+        const intentId = Number(path.split("/")[3]);
+        if (!Number.isInteger(intentId)) return Response.json({ error: "invalid id" }, { status: 400, headers: corsHeaders(origin) });
+        const intents = getActiveIntents() as any[];
+        const intent = intents.find((i) => i.id === intentId && i.user_id === userId);
+        if (!intent) {
+          log(`POST /api/intents/${intentId}/cancel → 404 user=${userId}`);
+          return Response.json({ error: "not found" }, { status: 404, headers: corsHeaders(origin) });
+        }
+        updateIntentStatus(intentId, "cancelled");
+        log(`POST /api/intents/${intentId}/cancel → 200 user=${userId}`);
+        return Response.json({ ok: true }, { headers: corsHeaders(origin) });
+      } catch (error) {
+        log(`POST ${path} → 401 err=${error instanceof Error ? error.message : "?"}`);
+        return Response.json({ error: error instanceof Error ? error.message : "unauthorized" }, { status: 401, headers: corsHeaders(origin) });
+      }
+    }
+
+    if (path.startsWith("/api/")) log(`${req.method} ${path} → 404 origin=${origin ?? "-"}`);
+    return Response.json({ error: "not found" }, { status: 404, headers: corsHeaders(origin) });
+  };
+}
+
+export function startApi(port = Number(process.env.API_PORT ?? 8787)) {
+  const handler = createApiHandler();
+  return Bun.serve({
+    port,
+    fetch: handler,
+  });
+}

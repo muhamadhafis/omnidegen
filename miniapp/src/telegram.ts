@@ -1,6 +1,6 @@
-import { BOT_URL } from "./config";
-
 // Minimal Telegram WebApp binding (tanpa dep tambahan).
+import { dlog } from "./debug-log";
+
 export function tg(): any {
   return (window as any)?.Telegram?.WebApp;
 }
@@ -33,20 +33,37 @@ export function inTelegram(): boolean {
   }
 }
 
-export function openBot(): boolean {
+export function telegramInitData(): string {
   try {
-    const w = tg();
+    return tg()?.initData ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function openBot(botUrl: string): boolean {
+  const w = tg();
+
+  try {
     if (w?.openTelegramLink) {
-      w.openTelegramLink(BOT_URL);
+      w.openTelegramLink(botUrl);
+      setTimeout(() => {
+        try {
+          w.close?.();
+        } catch {
+          // Some Telegram clients keep the Mini App open after navigation.
+        }
+      }, 250);
       return true;
     }
     if (w?.openLink) {
-      w.openLink(BOT_URL);
+      w.openLink(botUrl);
       return true;
     }
   } catch {
     return false;
   }
+  window.location.href = botUrl;
   return false;
 }
 
@@ -63,8 +80,10 @@ const ANY_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
 // Scheme dompet → basis universal link https (path+query dipertahankan,
 // termasuk ?uri= WalletConnect). Di luar daftar ini: jangan tebak.
+// MetaMask dikecualikan: universal link via openLink Telegram terbukti
+// membuka app TANPA query ?uri= (diagnosa HP: proposal tak pernah muncul),
+// jadi metamask:// dikirim mentah sebagai intent via iframe.
 const SCHEME_TO_UNIVERSAL: Array<[RegExp, string]> = [
-  [/^metamask:\/\//i, "https://metamask.app.link/"],
   [/^trust:\/\//i, "https://link.trustwallet.com/"],
   [/^rainbow:\/\//i, "https://rnbwapp.com/"],
   [/^cbwallet:\/\//i, "https://go.cb-w.com/"],
@@ -72,7 +91,50 @@ const SCHEME_TO_UNIVERSAL: Array<[RegExp, string]> = [
 
 // Host universal link dompet: navigasi same-window ke sini pun harus lewat
 // openLink agar Mini App tidak ditinggalkan.
-const WALLET_UNIVERSAL_HOST = /^(metamask\.app\.link|link\.trustwallet\.com|rnbwapp\.com|go\.cb-w\.com)([/:?#]|$)/i;
+const WALLET_UNIVERSAL_HOST = /^(metamask\.app\.link|link\.trustwallet\.com|rnbwapp\.com|go\.cb-w\.com|go\.rabby\.io)([/:?#]|$)/i;
+
+export type MobilePlatform = "ios" | "android" | "other";
+
+// Platform dari Telegram WebApp dulu, fallback UA (untuk browser biasa).
+export function tgPlatform(): MobilePlatform {
+  try {
+    const p = String(tg()?.platform ?? "").toLowerCase();
+    if (p.includes("ios")) return "ios";
+    if (p.includes("android")) return "android";
+  } catch { /* lanjut cek UA */ }
+  try {
+    const ua = navigator.userAgent;
+    if (/iphone|ipad|ipod/i.test(ua)) return "ios";
+    if (/android/i.test(ua)) return "android";
+  } catch { /* abaikan */ }
+  return "other";
+}
+
+export type WalletOpenAction = { via: "iframe" | "openlink"; url: string } | null;
+
+// Pure + testable: putuskan transport buka-dompet per platform.
+// - MetaMask Android: intent mentah via iframe (universal via openLink
+//   terbukti membuka app TANPA query ?uri= di Android).
+// - MetaMask iOS: universal link via openLink (handoff iOS andal).
+// - Rabby: selalu intent mentah via iframe — registry WC resmi Rabby
+//   TIDAK mendaftarkan universal link (mobile.universal kosong).
+export function resolveWalletOpen(raw: string, platform: MobilePlatform): WalletOpenAction {
+  const u = String(raw ?? "");
+  if (/^metamask:\/\//i.test(u)) {
+    if (platform === "ios") {
+      return { via: "openlink", url: "https://metamask.app.link/" + u.replace(/^metamask:\/\//i, "").replace(/^\/+/, "") };
+    }
+    return { via: "iframe", url: u };
+  }
+  if (/^rabby:\/\//i.test(u)) return { via: "iframe", url: u };
+  if (ANY_SCHEME.test(u) && !WEB_SCHEME.test(u)) {
+    const uni = toUniversal(u);
+    if (/^https?:\/\//i.test(uni)) return { via: "openlink", url: uni };
+    return { via: "iframe", url: u };
+  }
+  if (isWalletHttp(u)) return { via: "openlink", url: u };
+  return null;
+}
 
 function toUniversal(raw: string): string {
   for (const [re, base] of SCHEME_TO_UNIVERSAL) {
@@ -119,20 +181,13 @@ export function patchCustomSchemeOpen() {
   };
   // Kembalikan true bila URL ditangani (jangan teruskan ke aslinya).
   const handleUrl = (raw: string, openBlank: (url: string) => void): boolean => {
-    const u = String(raw ?? "");
-    if (ANY_SCHEME.test(u) && !WEB_SCHEME.test(u)) {
-      const uni = toUniversal(u);
-      if (/^https?:\/\//i.test(uni)) openExternalHttps(uni, openBlank);
-      else openSchemeViaIframe(u); // scheme tak dikenal: tanpa navigasi
-      showSchemeHintOnce();
-      return true;
-    }
-    if (isWalletHttp(u)) {
-      openExternalHttps(u, openBlank);
-      showSchemeHintOnce();
-      return true;
-    }
-    return false;
+    const act = resolveWalletOpen(raw, tgPlatform());
+    if (!act) return false;
+    dlog(`intercept: ${String(raw ?? "").slice(0, 160)} → via=${act.via}`);
+    if (act.via === "openlink") openExternalHttps(act.url, openBlank);
+    else openSchemeViaIframe(act.url); // intent mentah: tanpa navigasi webview
+    showSchemeHintOnce();
+    return true;
   };
   try {
     // Vektor 1: window.open("metamask://…", …)

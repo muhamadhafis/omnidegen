@@ -54,6 +54,11 @@ forge test --root contracts   # contracts: 6 unit + 1 fork (needs RPC_URL)
 bun run src/index.ts   # bot + monitor; MOCK_TX=true until you point at a deployed vault
 ```
 
+Wallet linking Mini App memakai endpoint Bun `POST /api/link-wallet`. Set `API_ENABLED=true`,
+`API_PORT`, dan `MINIAPP_ORIGIN` di backend, lalu `VITE_API_URL` di `miniapp/.env`.
+Backend memvalidasi `Telegram.WebApp.initData` sebelum menyimpan wallet ke tabel SQLite
+`users`; bot kemudian langsung mengenali wallet Telegram yang sudah terhubung.
+
 Deploy / verify:
 
 ```bash

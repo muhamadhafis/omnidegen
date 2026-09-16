@@ -92,7 +92,7 @@ describe("engine", () => {
     const conn = createDb();
     saveIntent({ userId: "u9", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, conn);
     let called = 0;
-    expect(await tickOnce(500, { conn, exec: async () => void called++ && "0xx" })).toEqual([]);
+    expect(await tickOnce(500, { conn, exec: async () => { called++; return "0xx"; } })).toEqual([]);
     expect(called).toBe(0);
     expect(getActiveIntents(conn).length).toBe(1);
   });

@@ -1,5 +1,5 @@
 import { parseUserIntent, type ParsedIntent } from "./ai";
-import { getActiveIntents, getLastIntent, saveIntent } from "./db";
+import { getActiveIntents, getLastIntent, getUserWallet, saveIntent, saveUserWallet } from "./db";
 import { WBNB, getVaultBalances, triggerHedgeTransaction, validateHedgeRequest } from "./web3";
 import { fetchPrice, setMockPrice, failHint } from "./loop";
 import { formatEther } from "viem";
@@ -11,9 +11,8 @@ export function routeIntent(p: ParsedIntent): "monitor" | "execute_now" | "info"
   return p.type === "stop_loss" || p.type === "take_profit" ? "monitor" : "execute_now";
 }
 
-const wallets = new Map<string, string>(); // ponytail: in-memory, pindah ke kolom users kalau multi-instance
-export const setWallet = (uid: string, w: string) => void wallets.set(uid, w);
-export const getWallet = (uid: string) => wallets.get(uid);
+export const setWallet = (uid: string, w: string) => saveUserWallet(uid, w);
+export const getWallet = (uid: string) => getUserWallet(uid);
 
 // konfirmasi eksekusi instan: uang beneran bergerak, wajib YA eksplisit
 const pending = new Map<string, ParsedIntent>();
@@ -29,23 +28,26 @@ export function parseCrash(text: string): number | null {
 }
 export const isAdmin = (uid: string) => (process.env.ADMIN_ID ?? "") !== "" && uid === process.env.ADMIN_ID;
 
-// pure + testable: format /info
 export function statusLine(it: any): string {
   const base = `${it.intent_type} ${it.asset_to_monitor}->${it.action_asset} @ $${it.trigger_price}`;
   if (it.status === "executed") return `✅ ${base} — dieksekusi`;
   if (it.status === "failed") return `❌ ${base} — gagal`;
   return `• ${base}`;
 }
+
 export function formatInfo(wallet: string, b: { walletBnb: bigint; wbnb: bigint; allowance: bigint; stable: bigint }, intents: any[], last?: any): string {
   const rows = intents.map((i) => `• ${i.intent_type} ${i.asset_to_monitor}->${i.action_asset} @ $${i.trigger_price}`).join("\n") || "(belum ada strategi aktif)";
   const tail = last && last.status !== "active" ? `\n🕓 Terakhir: ${statusLine(last)}` : "";
   return `👛 ${wallet}\n💰 Wallet: ${formatEther(b.walletBnb)} BNB | ${formatEther(b.wbnb)} WBNB | ${formatEther(b.stable)} mUSDC\n🛡️ Izin ke vault: ${formatEther(b.allowance)} WBNB\n📋 Strategi aktif:\n${rows}${tail}`;
 }
 
-// pure + testable: teks panduan /approve
 export function approveText(): string {
   const v = process.env.VAULT_CONTRACT_ADDRESS ?? "?";
-  return `🛡️ Izinkan vault menarik WBNB saat rescue (bisa dicabut kapan saja):\n1. Wrap: kontrak WBNB ${WBNB} → deposit() isi BNB\n2. Approve: kontrak WBNB → approve(${v}, jumlah)\nCek izin aktif via /info.`;
+  return `🛡️ Izinkan vault menarik WBNB saat rescue (bisa dicabut kapan saja):\n1. Wrap: kontrak WBNB ${WBNB} → deposit() isi BNB\n2. Approve: kontrak WBNB → approve(${v}, jumlah)\nCek izin aktif via Mini App.`;
+}
+
+export function miniAppRedirect(): string {
+  return "Buka Mini App untuk melihat saldo, allowance, strategi, dan transaksi wallet kamu.";
 }
 
 const token = () => process.env.TELEGRAM_BOT_TOKEN ?? "dummy";
@@ -62,35 +64,31 @@ async function sendMessage(chat_id: string | number, text: string, markup?: unkn
   return r;
 }
 
-// pure + testable: keyboard tombol Mini App (hilang kalau URL belum diset)
 export function webAppKeyboard(): unknown {
   const url = process.env.MINIAPP_URL ?? "";
   if (!url) return undefined;
   return { inline_keyboard: [[{ text: "📱 Buka Dompet", web_app: { url } }]] };
 }
 
-type Ctx = { from: { id: number }; message: { text: string }; reply: (t: string) => Promise<unknown> };
+type Reply = (t: string, markup?: unknown) => Promise<unknown>;
+type Ctx = { from: { id: number }; message: { text: string }; reply: Reply };
 let startHandler: (ctx: Ctx) => unknown = (ctx) =>
-  ctx.reply("Halo! Kirim alamat wallet 0x... kamu dulu, lalu strategi. Cth: 'Jual BNB ke USDC kalau < $450'.");
+  ctx.reply("Halo! Hubungkan dompet via Mini App, lalu kirim strategi. Cth: 'Kalau BNB di atas 500 maka TP'.", webAppKeyboard());
 
-async function handleText(uid: string, text: string, reply: (t: string) => Promise<unknown>) {
+async function handleText(uid: string, text: string, reply: Reply) {
   const t = text.trim();
-  if (/^0x[0-9a-fA-F]{40}$/.test(t)) {
-    setWallet(uid, t);
-    return reply("✅ Wallet tersimpan. Silakan kirim strategi.");
-  }
-  const wallet = getWallet(uid);
-  if (!wallet) return reply("Kirim alamat wallet 0x... dulu.");
   const up = t.toUpperCase();
   if (up === "YA" || up === "BATAL") {
     const p = getPending(uid);
     clearPending(uid);
     if (up === "BATAL" || !p) return reply("Dibatalkan.");
-    return runInstant(uid, wallet, p, reply);
+    return runInstant(uid, p, reply);
   }
-  clearPending(uid); // pesan baru menggugurkan konfirmasi lama
+  clearPending(uid);
   const parsed = await parseUserIntent(t);
   if (!parsed) return reply("❌ Tidak paham. Sebut token + harga. Cth: 'kumpulin receh jadi BNB'.");
+  const wallet = getWallet(uid);
+  if (!wallet) return reply("Hubungkan wallet dulu via Mini App.", webAppKeyboard());
   const route = routeIntent(parsed);
   if (route === "info") return answerInfo(uid, wallet, reply);
   if (route === "monitor") {
@@ -105,7 +103,9 @@ async function handleText(uid: string, text: string, reply: (t: string) => Promi
   return reply("❌ Intent ditolak guardrail.");
 }
 
-async function runInstant(uid: string, wallet: string, parsed: ParsedIntent, reply: (t: string) => Promise<unknown>) {
+async function runInstant(uid: string, parsed: ParsedIntent, reply: Reply) {
+  const wallet = getWallet(uid);
+  if (!wallet) return reply("Wallet tidak ditemukan. Hubungkan via Mini App.", webAppKeyboard());
   try {
     const tx = await triggerHedgeTransaction(wallet);
     return reply(tx ? `🚨 Batch ${parsed.type} dieksekusi.\nTx: ${tx}\nCek: https://testnet.bscscan.com/tx/${tx}` : "❌ Eksekusi gagal.");
@@ -114,7 +114,7 @@ async function runInstant(uid: string, wallet: string, parsed: ParsedIntent, rep
   }
 }
 
-async function answerInfo(uid: string, wallet: string, reply: (t: string) => Promise<unknown>) {
+async function answerInfo(uid: string, wallet: string, reply: Reply) {
   try {
     const b = await getVaultBalances(wallet);
     const mine = (getActiveIntents() as any[]).filter((i) => i.user_id === uid);
@@ -137,22 +137,17 @@ async function poll() {
         if (!msg?.text) continue;
         const uid = String(msg.from.id);
         console.log(`[inbox ${uid}] ${(msg.text ?? "").slice(0, 80)}`);
-        const reply = (t: string) => sendMessage(uid, t);
+        const reply = (t: string, markup?: unknown) => sendMessage(uid, t, markup);
         const ctx: Ctx = { from: { id: msg.from.id }, message: { text: msg.text }, reply };
         if (msg.text.startsWith("/start")) {
-          await sendMessage(uid, "Halo! Hubungkan dompet via Mini App atau kirim alamat wallet 0x... kamu, lalu strategi. Cth: 'Jual BNB ke USDC kalau < $450'.", webAppKeyboard());
+          await sendMessage(uid, "Halo! Hubungkan dompet via Mini App, lalu kirim strategi. Cth: 'Kalau BNB di atas 500 maka TP'.", webAppKeyboard());
         } else if (msg.text === "/app") {
           const kb = webAppKeyboard();
           await sendMessage(uid, kb ? "Buka dompet OmniDegen:" : "Mini App belum diset (MINIAPP_URL kosong).", kb);
         } else if (msg.text === "/info") {
-          const w = getWallet(uid);
-          if (!w) {
-            await reply("Kirim alamat wallet 0x... dulu.");
-            continue;
-          }
-          await answerInfo(uid, w, reply);
+          await reply(miniAppRedirect(), webAppKeyboard());
         } else if (msg.text === "/approve") {
-          await reply(approveText());
+          await reply(miniAppRedirect(), webAppKeyboard());
         } else if (msg.text.startsWith("/crash") || msg.text === "/price") {
           if (!isAdmin(uid)) {
             await reply("⛔ Khusus admin demo.");

@@ -12,6 +12,7 @@ export const SCAN_TX = (h: string) => `https://testnet.bscscan.com/tx/${h}`;
 
 export const CHAIN = bscTestnet;
 export const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID ?? "";
+export const API_URL = import.meta.env.VITE_API_URL ?? "";
 // Wajib di webview Telegram: tanpa ini Privy buka dompet via scheme mentah
 // (metamask://…) yang membunuh Mini App (ERR_UNKNOWN_URL_SCHEME).
 // Dengan ini koneksi lewat relay WalletConnect + universal link https.
@@ -23,19 +24,21 @@ export const wagmiConfig = createConfig({
 });
 
 export const privyConfig = {
-  // Login hanya via dompet. Di webview Telegram, ketuk dompet diamankan
-  // patchCustomSchemeOpen (main.tsx): scheme → universal https → openLink.
+  // Login hanya via dompet. Fokus 2 dompet: MetaMask (tombol langsung) +
+  // Rabby (via entri WalletConnect — registry resmi WC; 'rabby_wallet'
+  // sebagai nama sudah deprecated di Privy dan tak bisa dipakai langsung).
+  // Di webview Telegram, ketuk dompet diamankan patchCustomSchemeOpen
+  // (main.tsx): MetaMask Android/Rabby via intent mentah, MetaMask iOS
+  // via universal link. 'wallet_connect_qr' TIDAK dipakai: tak jalan di mobile.
   loginMethods: ["wallet"] as ["wallet"],
   supportedChains: [bscTestnet],
   defaultChain: bscTestnet,
   embeddedWallets: { ethereum: { createOnLogin: "users-without-wallets" as const } },
   appearance: {
     theme: "dark" as const,
-    // OKX dikecualikan di Telegram: universal link-nya scheme mentah
-    // (okex://…) yang tak bisa ditulis ulang aman. Trust/OKX/dll via QR.
     ...(inTelegram()
-      ? { walletList: ["metamask", "rainbow", "coinbase_wallet", "wallet_connect_qr"] as ["metamask", "rainbow", "coinbase_wallet", "wallet_connect_qr"] }
-      : {}),
+      ? { walletList: ["metamask", "wallet_connect"] as ["metamask", "wallet_connect"] }
+      : { walletList: ["metamask", "detected_ethereum_wallets", "wallet_connect"] as ["metamask", "detected_ethereum_wallets", "wallet_connect"] }),
   },
   ...(WC_PROJECT_ID ? { walletConnectCloudProjectId: WC_PROJECT_ID } : {}),
 };

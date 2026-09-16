@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { createDb, saveIntent, getActiveIntents, claimIntent, getLastIntent } from "./db";
+import { createDb, getActiveIntents, getLastIntent, getUserWallet, claimIntent, saveIntent, saveUserWallet } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
 
@@ -31,5 +31,13 @@ describe("db", () => {
     expect((getLastIntent("1", c) as any).id).toBe(b);
     expect((getLastIntent("2", c) as any)).toBeNull();
     void a;
+  });
+  test("persists wallet by Telegram user and updates it", () => {
+    const c = createDb();
+    saveUserWallet("6577260927", W, c);
+    expect(getUserWallet("6577260927", c)).toBe(W);
+    saveUserWallet("6577260927", W.replace("1234", "abcd"), c);
+    expect(getUserWallet("6577260927", c)).toBe(W.replace("1234", "abcd"));
+    expect(() => saveUserWallet("6577260927", "not-an-address", c)).toThrow();
   });
 });

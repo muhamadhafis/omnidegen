@@ -1,4 +1,5 @@
 import { MessageCircle } from "lucide-react";
+import { BOT_URL } from "../config";
 import { openBot } from "../telegram";
 import { InfoTooltip } from "./ui/tooltip";
 import Button from "./ui/Button";
@@ -17,7 +18,7 @@ export default function AlarmCard({ ready }: { ready: boolean }) {
           type="button"
           disabled={!ready}
           onClick={() => {
-            if (ready) openBot();
+            if (ready) openBot(BOT_URL);
           }}
         >
           <MessageCircle aria-hidden="true" size={16} strokeWidth={1.8} />
