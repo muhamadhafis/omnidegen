@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { API_URL, apiHeaders } from "../config";
-import { inTelegram } from "../telegram";
+import { API_URL, apiHeaders, SCAN_TX } from "../config";
+import { inTelegram, shortAddr } from "../telegram";
 import Button from "./ui/Button";
 import Surface from "./ui/Surface";
 import { X } from "lucide-react";
@@ -12,6 +12,8 @@ type Strategy = {
   action_asset: string;
   trigger_price: number;
   status: string;
+  user_wallet: string;
+  tx_hash?: string | null;
 };
 
 export default function StrategyCard({ initData }: { initData: string }) {
@@ -76,6 +78,12 @@ export default function StrategyCard({ initData }: { initData: string }) {
                 <span className="strategy-detail">
                   {s.asset_to_monitor} → {s.action_asset} @ ${s.trigger_price}
                 </span>
+                <span className="strategy-detail">Dompet {shortAddr(s.user_wallet)}</span>
+                {s.tx_hash && /^0x[0-9a-fA-F]{64}$/.test(s.tx_hash) && (
+                  <a className="tx" href={SCAN_TX(s.tx_hash)} target="_blank" rel="noreferrer">
+                    Lihat Tx ↗
+                  </a>
+                )}
                 <span className={`strategy-status ${s.status}`}>{s.status}</span>
               </div>
               {s.status === "active" && (

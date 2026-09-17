@@ -10,6 +10,10 @@ describe("ai", () => {
     expect(parseIntentJson(JSON.stringify({ type: "vacuum", asset: "DUST", target: "BNB", amountPct: 999 }))).toBeNull();
     expect(parseIntentJson("bukan json")).toBeNull();
   });
+  test("hedge USDT dinormalisasi ke USDC (vault cuma swap ke mUSDC)", () => {
+    expect(parseIntentJson(JSON.stringify({ type: "take_profit", asset: "BNB", target: "usdt", price: 460, amountPct: 100 }))).toEqual({ type: "take_profit", asset: "BNB", target: "USDC", price: 460, amountPct: 100 });
+    expect(parseIntentJson(JSON.stringify({ type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 }))).toEqual({ type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 });
+  });
   test("parse ask tanpa syarat aset/harga", () => {
     expect(parseIntentJson(JSON.stringify({ type: "ask" }))).toEqual({ type: "ask", asset: "BNB", target: "BNB", price: 0, amountPct: 100 });
   });

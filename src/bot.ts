@@ -1,7 +1,7 @@
 import { parseUserIntent, type ParsedIntent } from "./ai";
 import { getActiveIntents, getLastIntent, getUserWallet, saveIntent, saveUserWallet } from "./db";
 import { WBNB, getVaultBalances, triggerHedgeTransaction, validateHedgeRequest } from "./web3";
-import { fetchPrice, setMockPrice, failHint } from "./loop";
+import { fetchPrice, setMockPrice, failHint, isRealTxHash } from "./loop";
 import { formatEther } from "viem";
 
 // pure + testable: routing 4 use-case (ask = tanya saldo, jawab tanpa eksekusi)
@@ -92,8 +92,9 @@ async function handleText(uid: string, text: string, reply: Reply) {
   const route = routeIntent(parsed);
   if (route === "info") return answerInfo(uid, wallet, reply);
   if (route === "monitor") {
+    if (parsed.target !== "USDC") return reply("❌ Vault testnet hanya swap ke USDC (mUSDC). Buat ulang strategi dengan target USDC.");
     saveIntent({ userId: uid, userWallet: wallet, intentType: parsed.type, asset: parsed.asset, target: parsed.target, price: parsed.price, amountPct: parsed.amountPct });
-    return reply(`✅ ${parsed.type} aktif: ${parsed.asset}->${parsed.target} @ $${parsed.price}. Pantau 24/7.`);
+    return reply(`✅ ${parsed.type} aktif: ${parsed.asset}->${parsed.target} @ $${parsed.price} (dompet ${wallet.slice(0, 6)}…${wallet.slice(-4)}). Pantau 24/7.`);
   }
   if (route === "execute_now") {
     if (!validateHedgeRequest(wallet, parsed.target)) return reply("❌ Target/wallet tidak diizinkan (guardrail).");
@@ -108,7 +109,9 @@ async function runInstant(uid: string, parsed: ParsedIntent, reply: Reply) {
   if (!wallet) return reply("Wallet tidak ditemukan. Hubungkan via Mini App.", webAppKeyboard());
   try {
     const tx = await triggerHedgeTransaction(wallet);
-    return reply(tx ? `🚨 Batch ${parsed.type} dieksekusi.\nTx: ${tx}\nCek: https://testnet.bscscan.com/tx/${tx}` : "❌ Eksekusi gagal.");
+    if (!tx) return reply("❌ Eksekusi gagal.");
+    const link = isRealTxHash(tx) ? `\nCek: https://testnet.bscscan.com/tx/${tx}` : "";
+    return reply(`🚨 Batch ${parsed.type} dieksekusi.\nTx: ${tx}${link}`);
   } catch (e) {
     return reply(`❌ Eksekusi gagal: ${failHint(e instanceof Error ? e.message : "")}`);
   }

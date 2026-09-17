@@ -1,4 +1,5 @@
-import { saveUserWallet, getUserWallet, getActiveIntents, updateIntentStatus } from "./db";
+import { db, saveUserWallet, getUserWallet, getActiveIntents, updateIntentStatus, cancelStaleIntents } from "./db";
+import type { Database } from "bun:sqlite";
 import { verifyTelegramInitData } from "./telegram-auth";
 
 const getAllowedOrigin = () => process.env.MINIAPP_ORIGIN ?? "";
@@ -38,7 +39,8 @@ function requireAuth(req: Request): string {
   return verifyTelegramInitData(initData, process.env.TELEGRAM_BOT_TOKEN ?? "");
 }
 
-export function createApiHandler() {
+// conn di-inject agar test tak menyentuh DB produksi (default = db file).
+export function createApiHandler(conn: Database = db) {
   return async function handler(req: Request) {
     const origin = req.headers.get("origin");
     if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders(origin) });
@@ -53,8 +55,9 @@ export function createApiHandler() {
       try {
         const body = await req.json() as { initData?: string; wallet?: string };
         const userId = verifyTelegramInitData(body.initData ?? "", process.env.TELEGRAM_BOT_TOKEN ?? "");
-        saveUserWallet(userId, body.wallet ?? "");
-        log(`POST /api/link-wallet → 200 user=${userId} wallet=${body.wallet ?? ""}`);
+        saveUserWallet(userId, body.wallet ?? "", conn);
+        const dropped = cancelStaleIntents(userId, body.wallet ?? "", conn);
+        log(`POST /api/link-wallet → 200 user=${userId} wallet=${body.wallet ?? ""} staleCancelled=${dropped}`);
         sendTelegramMessage(userId, "✅ Wallet tersinkron dengan bot. Sekarang kamu bisa kirim strategi via chat.");
         return Response.json({ ok: true }, { headers: corsHeaders(origin) });
       } catch (error) {
@@ -66,12 +69,12 @@ export function createApiHandler() {
     if (path === "/api/me" && req.method === "GET") {
       try {
         const userId = requireAuth(req);
-        const wallet = getUserWallet(userId);
+        const wallet = getUserWallet(userId, conn);
         if (!wallet) {
           log(`GET /api/me → 404 user=${userId} (belum link)`);
           return Response.json({ error: "wallet not linked" }, { status: 404, headers: corsHeaders(origin) });
         }
-        const intents = getActiveIntents().filter((i: any) => i.user_id === userId);
+        const intents = getActiveIntents(conn).filter((i: any) => i.user_id === userId);
         log(`GET /api/me → 200 user=${userId} intents=${intents.length}`);
         return Response.json({ wallet, intents }, { headers: corsHeaders(origin) });
       } catch (error) {
@@ -85,13 +88,13 @@ export function createApiHandler() {
         const userId = requireAuth(req);
         const intentId = Number(path.split("/")[3]);
         if (!Number.isInteger(intentId)) return Response.json({ error: "invalid id" }, { status: 400, headers: corsHeaders(origin) });
-        const intents = getActiveIntents() as any[];
+        const intents = getActiveIntents(conn) as any[];
         const intent = intents.find((i) => i.id === intentId && i.user_id === userId);
         if (!intent) {
           log(`POST /api/intents/${intentId}/cancel → 404 user=${userId}`);
           return Response.json({ error: "not found" }, { status: 404, headers: corsHeaders(origin) });
         }
-        updateIntentStatus(intentId, "cancelled");
+        updateIntentStatus(intentId, "cancelled", conn);
         log(`POST /api/intents/${intentId}/cancel → 200 user=${userId}`);
         return Response.json({ ok: true }, { headers: corsHeaders(origin) });
       } catch (error) {

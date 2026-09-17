@@ -1,4 +1,4 @@
-import { claimIntent, db, getActiveIntents, updateIntentStatus } from "./db";
+import { claimIntent, db, getActiveIntents, updateIntentProof, updateIntentStatus } from "./db";
 import { triggerHedgeTransaction } from "./web3";
 import { bot } from "./bot";
 import type { Database } from "bun:sqlite";
@@ -9,10 +9,18 @@ export const getMockPrice = () => mockPrice;
 
 // pure + testable: alasan gagal jadi bahasa manusia
 export function failHint(reason: string): string {
-  if (reason.includes("no approve")) return "belum approve vault — ketik /approve";
+  if (reason.includes("no approve")) return "belum approve vault — buka Mini App untuk approve";
   if (reason.includes("no balance")) return "saldo WBNB kurang — wrap dulu, cek /info";
   if (reason.includes("no deposit")) return "tidak ada BNB di vault — deposit dulu, cek /info";
+  if (reason.includes("no receipt")) return "Tx terkirim tapi tak terkonfirmasi (kemungkinan dropped) — cek hash di bscscan, buat intent baru bila perlu";
+  if (reason.includes("revert")) return "Tx ditolak chain (revert) — cek allowance/saldo, lalu buat intent baru";
+  if (reason.includes("propagating") || reason.includes("origin tak menyimpan")) return "Tx tak terlihat jaringan (RPC origin bermasalah?) — cek RPC_URL, buat intent baru dan coba lagi";
   return reason.slice(0, 120);
+}
+// pure + testable: hanya hash 64-hex yang boleh di-link ke explorer.
+// Mock (0xmock…) dan string lain bukan bukti chain.
+export function isRealTxHash(tx: unknown): tx is `0x${string}` {
+  return typeof tx === "string" && /^0x[0-9a-fA-F]{64}$/.test(tx);
 }
 export function shouldTrigger(intent: any, price: number): boolean {
   if (intent.intent_type === "stop_loss") return price <= Number(intent.trigger_price);
@@ -45,9 +53,11 @@ export async function tickOnce(
         updateIntentStatus(it.id, "executed", conn);
         done.push(it.id);
         const tag = String(tx).startsWith("0xmock") ? "[SIMULASI] " : "";
+        const link = isRealTxHash(tx) ? `\nCek: https://testnet.bscscan.com/tx/${tx}` : "";
+        if (isRealTxHash(tx)) updateIntentProof(it.id, tx, conn);
         console.log(`[hedge] ${tag}user=${it.user_id} ${it.asset_to_monitor}->${it.action_asset} @ $${price} tx=${tx}`);
         try {
-          await notify(it.user_id, `🚨 ${tag}Penyelamatan: ${it.asset_to_monitor}->${it.action_asset} @ $${price}\nTx: ${tx}`);
+          await notify(it.user_id, `🚨 ${tag}Penyelamatan: ${it.asset_to_monitor}->${it.action_asset} @ $${price}\nTx: ${tx}${link}`);
         } catch {}
       } else updateIntentStatus(it.id, "active", conn);
     } catch (e) {

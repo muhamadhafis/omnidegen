@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { createDb, getActiveIntents, getLastIntent, getUserWallet, claimIntent, saveIntent, saveUserWallet } from "./db";
+import { createDb, getActiveIntents, getLastIntent, getUserWallet, claimIntent, saveIntent, saveUserWallet, cancelStaleIntents, runMigrations, updateIntentProof } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
 
@@ -39,5 +39,33 @@ describe("db", () => {
     saveUserWallet("6577260927", W.replace("1234", "abcd"), c);
     expect(getUserWallet("6577260927", c)).toBe(W.replace("1234", "abcd"));
     expect(() => saveUserWallet("6577260927", "not-an-address", c)).toThrow();
+  });
+  test("ganti dompet membatalkan intent wallet lama saja", () => {
+    const c = createDb();
+    const W2 = W.replace("1234", "abcd");
+    saveIntent({ userId: "1", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, c);
+    saveIntent({ userId: "1", userWallet: W2, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 400 }, c);
+    expect(cancelStaleIntents("1", W2, c)).toBe(1);
+    expect(getActiveIntents(c).length).toBe(1);
+    expect((getActiveIntents(c)[0] as any).user_wallet).toBe(W2);
+    expect(cancelStaleIntents("2", W2, c)).toBe(0); // user lain tak tersentuh
+  });
+  test("case address tak memicu cancel keliru (EIP-55 vs lowercase)", () => {
+    const c = createDb();
+    const mixed = "0x4Dc58A4AFbC95C337C3518b4d4878af9b80Bf3AA";
+    saveUserWallet("1", mixed, c);
+    expect(getUserWallet("1", c)).toBe(mixed.toLowerCase());
+    saveIntent({ userId: "1", userWallet: mixed, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 400 }, c);
+    expect(cancelStaleIntents("1", mixed.toLowerCase(), c)).toBe(0); // dompet sama
+    expect(cancelStaleIntents("1", mixed, c)).toBe(0); // dompet sama beda case
+    expect(getActiveIntents(c).length).toBe(1);
+  });
+  test("migrasi idempoten + proof roundtrip", () => {
+    const c = createDb();
+    runMigrations(c);
+    runMigrations(c); // jalan kedua tak boleh throw
+    const id = saveIntent({ userId: "1", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, c);
+    updateIntentProof(id, "0x" + "ab".repeat(32), c);
+    expect((c.query("select tx_hash from intents where id=$id").get({ $id: id }) as any).tx_hash).toBe("0x" + "ab".repeat(32));
   });
 });

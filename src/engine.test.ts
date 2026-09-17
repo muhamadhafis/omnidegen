@@ -1,8 +1,8 @@
 import { describe, test, expect } from "bun:test";
-import { shouldTrigger, tickOnce, failHint } from "./loop";
-import { validateHedgeRequest } from "./web3";
-import { routeIntent, setWallet, getWallet, parseCrash, isAdmin, formatInfo, statusLine, approveText, webAppKeyboard, setPending, getPending, clearPending } from "./bot";
-import { createDb, saveIntent, getActiveIntents } from "./db";
+import { shouldTrigger, tickOnce, failHint, isRealTxHash } from "./loop";
+import { applySlippage, checkPropagated, confirmTransaction, validateHedgeRequest } from "./web3";
+import { routeIntent, parseCrash, isAdmin, formatInfo, statusLine, approveText, webAppKeyboard, setPending, getPending, clearPending } from "./bot";
+import { createDb, saveIntent, getActiveIntents, saveUserWallet, getUserWallet } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
 
@@ -17,14 +17,61 @@ describe("engine", () => {
     expect(validateHedgeRequest(W, "USDC")).toBe(true);
     expect(validateHedgeRequest("bad", "USDC")).toBe(false);
     expect(validateHedgeRequest(W, "HACK")).toBe(false);
+    expect(validateHedgeRequest(W, "USDT")).toBe(false); // vault tak bisa keluarkan USDT
+  });
+  test("slippage: potong quote per bps", () => {
+    expect(applySlippage(10000n, 200)).toBe(9800n); // default 2%
+    expect(applySlippage(10000n, 0)).toBe(10000n);
+    expect(() => applySlippage(0n, 200)).toThrow("no liquidity");
+    expect(() => applySlippage(10000n, 10001)).toThrow("bad slippage");
+  });
+  test("propagasi: terlihat / coba-lagi / hilang", async () => {
+    expect(await checkPropagated(async () => ({ h: 1 }), "0xabc" as `0x${string}`, 3, 1)).toBe(true);
+    let n = 0;
+    const flaky = async () => (++n >= 2 ? { h: 1 } : null);
+    expect(await checkPropagated(flaky, "0xabc" as `0x${string}`, 3, 1)).toBe(true);
+    expect(n).toBe(2);
+    expect(await checkPropagated(async () => { throw new Error("nf"); }, "0xabc" as `0x${string}`, 2, 1)).toBe(false);
+  });
+  test("isRealTxHash hanya hash 64-hex", () => {
+    expect(isRealTxHash("0x" + "ab".repeat(32))).toBe(true);
+    expect(isRealTxHash("0xmock123")).toBe(false);
+    expect(isRealTxHash("0xtest")).toBe(false);
+    expect(isRealTxHash(undefined)).toBe(false);
+  });
+  test("tickOnce simpan proof untuk hash real", async () => {
+    const conn = createDb();
+    const id = saveIntent({ userId: "u9", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, conn);
+    await tickOnce(440, { conn, exec: async () => "0x" + "cd".repeat(32) });
+    // baca via .all(): .get() berparameter flaky pada driver sqlite (lihat catatan plan)
+    const rows = conn.query("select id, tx_hash from intents").all() as any[];
+    expect(rows.find((r) => r.id === id)?.tx_hash).toBe("0x" + "cd".repeat(32));
+  });
+  test("tickOnce lewati proof untuk mock", async () => {
+    const conn = createDb();
+    const id = saveIntent({ userId: "u9", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, conn);
+    await tickOnce(440, { conn, exec: async () => "0xmock1" });
+    const rows = conn.query("select id, tx_hash from intents").all() as any[];
+    expect(rows.find((r) => r.id === id)?.tx_hash).toBeNull();
+  });
+  test("confirmTransaction: sukses / revert / hilang", async () => {
+    const ok = { waitForTransactionReceipt: async () => ({ status: "success" }) };
+    await confirmTransaction(ok, "0xabc" as `0x${string}`, 1000);
+    const bad = { waitForTransactionReceipt: async () => ({ status: "reverted" }) };
+    await expect(confirmTransaction(bad, "0xabc" as `0x${string}`, 1000)).rejects.toThrow("reverted");
+    const hang = { waitForTransactionReceipt: () => new Promise<{ status: string }>(() => {}) };
+    await expect(confirmTransaction(hang, "0xabc" as `0x${string}`, 50)).rejects.toThrow("no receipt");
+    expect(failHint("no receipt (60s): 0xabc")).toContain("dropped");
+    expect(failHint("tx reverted: 0xabc")).toContain("revert");
   });
   test("routing 3 use-case", () => {
     expect(routeIntent({ type: "stop_loss", asset: "BNB", target: "USDC", price: 450, amountPct: 100 })).toBe("monitor");
     expect(routeIntent({ type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 })).toBe("execute_now");
     expect(routeIntent({ type: "defi_batch", asset: "USDT", target: "BNB", price: 0, amountPct: 50 })).toBe("execute_now");
     expect(routeIntent({ type: "ask", asset: "BNB", target: "BNB", price: 0, amountPct: 100 } as any)).toBe("info");
-    setWallet("u1", W);
-    expect(getWallet("u1")).toBe(W);
+    const c = createDb(); // DB memori: test tak boleh menyentuh DB produksi
+    saveUserWallet("u1", W, c);
+    expect(getUserWallet("u1", c)).toBe(W);
   });
   test("admin crash command", () => {
     expect(parseCrash("/crash 440")).toBe(440);
@@ -50,7 +97,7 @@ describe("engine", () => {
     expect(statusLine({ intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("gagal");
     expect(formatInfo(W, { walletBnb: 0n, wbnb: 0n, allowance: 0n, stable: 0n }, [], { intent_type: "stop_loss", asset_to_monitor: "BNB", action_asset: "USDC", trigger_price: 450, status: "failed" })).toContain("Terakhir");
     expect(approveText()).toContain("Approve");
-    expect(failHint("no approve")).toContain("/approve");
+    expect(failHint("no approve")).toContain("Mini App");
   });
   test("pending konfirmasi instan", () => {    const p: any = { type: "vacuum", asset: "DUST", target: "BNB", price: 0, amountPct: 100 };
     expect(getPending("u1")).toBeUndefined();
