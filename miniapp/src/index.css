@@ -483,6 +483,16 @@ a:focus-visible {
   color: var(--red);
 }
 
+.strategy-status.executed {
+  background: rgba(61, 220, 132, 0.15);
+  color: var(--green);
+}
+
+.strategy-status.failed {
+  background: rgba(246, 70, 93, 0.15);
+  color: var(--red);
+}
+
 .muted {
   color: var(--muted);
   font-size: 13px;

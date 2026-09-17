@@ -1,4 +1,4 @@
-import { db, saveUserWallet, getUserWallet, getActiveIntents, updateIntentStatus, cancelStaleIntents } from "./db";
+import { db, saveUserWallet, getUserWallet, getActiveIntents, getRecentIntents, updateIntentStatus, cancelStaleIntents } from "./db";
 import type { Database } from "bun:sqlite";
 import { verifyTelegramInitData } from "./telegram-auth";
 
@@ -79,6 +79,17 @@ export function createApiHandler(conn: Database = db) {
         return Response.json({ wallet, intents }, { headers: corsHeaders(origin) });
       } catch (error) {
         log(`GET /api/me → 401 err=${error instanceof Error ? error.message : "?"}`);
+        return Response.json({ error: error instanceof Error ? error.message : "unauthorized" }, { status: 401, headers: corsHeaders(origin) });
+      }
+    }
+
+    if (path === "/api/history" && req.method === "GET") {
+      try {
+        const userId = requireAuth(req);
+        const items = getRecentIntents(userId, 20, conn);
+        log(`GET /api/history → 200 user=${userId} items=${items.length}`);
+        return Response.json({ items }, { headers: corsHeaders(origin) });
+      } catch (error) {
         return Response.json({ error: error instanceof Error ? error.message : "unauthorized" }, { status: 401, headers: corsHeaders(origin) });
       }
     }

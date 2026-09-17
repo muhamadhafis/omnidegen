@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { createDb, getActiveIntents, getLastIntent, getUserWallet, claimIntent, saveIntent, saveUserWallet, cancelStaleIntents, runMigrations, updateIntentProof } from "./db";
+import { createDb, getActiveIntents, getLastIntent, getRecentIntents, getUserWallet, claimIntent, saveIntent, saveUserWallet, cancelStaleIntents, runMigrations, updateIntentProof } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
 
@@ -67,5 +67,16 @@ describe("db", () => {
     const id = saveIntent({ userId: "1", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, c);
     updateIntentProof(id, "0x" + "ab".repeat(32), c);
     expect((c.query("select tx_hash from intents where id=$id").get({ $id: id }) as any).tx_hash).toBe("0x" + "ab".repeat(32));
+  });
+  test("riwayat urut terbaru + batas limit + per-user", () => {
+    const c = createDb();
+    saveIntent({ userId: "1", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 400 }, c);
+    saveIntent({ userId: "1", userWallet: W, intentType: "take_profit", asset: "BNB", target: "USDC", price: 500 }, c);
+    saveIntent({ userId: "2", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 400 }, c);
+    const all = getRecentIntents("1", 20, c) as any[];
+    expect(all.length).toBe(2);
+    expect(all[0].trigger_price).toBe(500); // terbaru dulu
+    expect(getRecentIntents("1", 1, c).length).toBe(1);
+    expect(getRecentIntents("9", 20, c).length).toBe(0);
   });
 });

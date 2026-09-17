@@ -4,7 +4,7 @@ import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSetActiveWallet } from "@privy-io/wagmi";
 import { parseEther } from "viem";
 import { API_URL, apiHeaders, CHAIN, FAUCET, MUSDC, PRIVY_APP_ID, VAULT, WBNB } from "./config";
-import { erc20Abi, wbnbAbi } from "./abi";
+import { erc20Abi, pancakeRouterAbi, vaultRouterAbi, wbnbAbi } from "./abi";
 import { inTelegram, initTelegram, telegramInitData, tg } from "./telegram";
 import { dlog, getLogs, subscribeLogs, type LogEntry } from "./debug-log";
 import { openWalletApp } from "./wallets";
@@ -13,6 +13,8 @@ import StatusCard from "./components/StatusCard";
 import StrategyCard from "./components/StrategyCard";
 import WrapCard from "./components/WrapCard";
 import ApproveCard from "./components/ApproveCard";
+import UnwrapCard from "./components/UnwrapCard";
+import ReverseSwapCard from "./components/ReverseSwapCard";
 import AlarmCard from "./components/AlarmCard";
 import Button from "./components/ui/Button";
 import Notice from "./components/ui/Notice";
@@ -124,6 +126,9 @@ export default function App() {
 
   const wrap = useTx();
   const appr = useTx();
+  const unwrap = useTx();
+  const rAppr = useTx();
+  const rSwap = useTx();
 
   useEffect(initTelegram, []);
 
@@ -131,6 +136,9 @@ export default function App() {
   const wbnb = useReadContract({ address: WBNB, abi: wbnbAbi, functionName: "balanceOf", args: [address!], query: { enabled: !!address } });
   const musdc = useReadContract({ address: MUSDC, abi: erc20Abi, functionName: "balanceOf", args: [address!], query: { enabled: !!address } });
   const allow = useReadContract({ address: WBNB, abi: wbnbAbi, functionName: "allowance", args: [address!, VAULT], query: { enabled: !!address } });
+  const router = useReadContract({ address: VAULT, abi: vaultRouterAbi, functionName: "router", query: { enabled: !!address } });
+  const routerAddr = router.data as `0x${string}` | undefined;
+  const musdcAllow = useReadContract({ address: MUSDC, abi: erc20Abi, functionName: "allowance", args: [address!, routerAddr!], query: { enabled: !!address && !!routerAddr } });
 
   useEffect(() => {
     if (wrap.isSuccess || appr.isSuccess) {
@@ -139,7 +147,13 @@ export default function App() {
       allow.refetch();
       bnb.refetch();
     }
-  }, [wrap.isSuccess, appr.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (unwrap.isSuccess || rAppr.isSuccess || rSwap.isSuccess) {
+      wbnb.refetch();
+      musdc.refetch();
+      musdcAllow.refetch();
+      bnb.refetch();
+    }
+  }, [wrap.isSuccess, appr.isSuccess, unwrap.isSuccess, rAppr.isSuccess, rSwap.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const readyTx = (allow.data ?? 0n) > 0n && (wbnb.data ?? 0n) > 0n;
 
@@ -181,6 +195,26 @@ export default function App() {
     } catch {
       tg()?.showAlert("Nominal salah. Contoh: 0.001");
     }
+  };
+  const doUnwrap = (amt: string) => {
+    try {
+      unwrap.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "withdraw", args: [parseEther(amt)] });
+    } catch {
+      tg()?.showAlert("Nominal salah. Contoh: 0.001");
+    }
+  };
+  const doApproveMusdc = (amt: string) => {
+    if (!routerAddr) return;
+    try {
+      rAppr.writeContract({ address: MUSDC, abi: erc20Abi, functionName: "approve", args: [routerAddr, parseEther(amt)] });
+    } catch {
+      tg()?.showAlert("Nominal salah. Contoh: 0.05");
+    }
+  };
+  const doReverseSwap = (amt: string, minOut: bigint) => {
+    if (!routerAddr || !address) return;
+    const deadline = BigInt(Math.floor(Date.now() / 1000) + 900);
+    rSwap.writeContract({ address: routerAddr, abi: pancakeRouterAbi, functionName: "swapExactTokensForTokens", args: [parseEther(amt), minOut, [MUSDC, WBNB], address, deadline] });
   };
   const doRevoke = () => appr.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "approve", args: [VAULT, 0n] });
 
@@ -339,6 +373,11 @@ export default function App() {
               <WrapCard tx={wrap} onWrap={doWrap} complete={(wbnb.data ?? 0n) > 0n} />
               <ApproveCard tx={appr} onApprove={doApprove} onRevoke={doRevoke} complete={(allow.data ?? 0n) > 0n} />
               <AlarmCard ready={readyTx} />
+            </div>
+            <div className="setup-flow" aria-label="Tukar balik">
+              <div className="flow-label">Tukar balik</div>
+              <UnwrapCard tx={unwrap} onUnwrap={doUnwrap} complete={false} />
+              <ReverseSwapCard appr={rAppr} swap={rSwap} router={routerAddr} allowance={musdcAllow.data as bigint | undefined} onApprove={doApproveMusdc} onSwap={doReverseSwap} />
             </div>
             {tele && address && telegramInitData() && (
               <StrategyCard initData={telegramInitData()} />

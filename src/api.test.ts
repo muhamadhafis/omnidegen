@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, test } from "bun:test";
 import { createApiHandler } from "./api";
-import { createDb, getUserWallet } from "./db";
+import { createDb, getUserWallet, saveIntent } from "./db";
 import type { Database } from "bun:sqlite";
 
 const TOKEN = "123456:ABC-secret";
@@ -41,5 +41,17 @@ describe("wallet linking API", () => {
     const response = await handler(new Request("https://api.test/api/link-wallet", { method: "POST", headers: { origin: "https://miniapp.example", "content-type": "application/json" }, body: JSON.stringify({ initData: signed(), wallet: WALLET }) }));
     expect(response.status).toBe(200);
     expect(getUserWallet("6577260927", conn)).toBe(WALLET);
+  });
+
+  test("history mengembalikan intent user + tolak tanpa auth", async () => {
+    const handler = createApiHandler(conn);
+    saveIntent({ userId: "6577260927", userWallet: WALLET, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 400 }, conn);
+    const res = await handler(new Request("https://api.test/api/history", { headers: { origin: "https://miniapp.example", "x-telegram-init-data": signed() } }));
+    expect(res.status).toBe(200);
+    const j: any = await res.json();
+    expect(j.items.length).toBe(1);
+    expect(j.items[0].intent_type).toBe("stop_loss");
+    const unauth = await handler(new Request("https://api.test/api/history", { headers: { origin: "https://miniapp.example" } }));
+    expect(unauth.status).toBe(401);
   });
 });

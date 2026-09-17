@@ -120,3 +120,10 @@ export function updateIntentProof(id: number, txHash: string, conn: Database = d
 export function getLastIntent(userId: string, conn: Database = db) {
   return conn.query(`SELECT * FROM intents WHERE user_id=$uid ORDER BY id DESC LIMIT 1`).get({ $uid: userId }) as any;
 }
+
+// riwayat: N intent terakhir user (termasuk executed/failed/cancelled).
+export function getRecentIntents(userId: string, limit = 20, conn: Database = db) {
+  const n = Math.floor(Number(limit));
+  const lim = !(n >= 1) ? 20 : Math.min(n, 100);
+  return conn.query(`SELECT * FROM intents WHERE user_id=$uid ORDER BY id DESC LIMIT ${lim}`).all({ $uid: userId }) as any[];
+}
