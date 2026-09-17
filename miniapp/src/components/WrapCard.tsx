@@ -1,16 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { SCAN_TX } from "../config";
 import type { TxHandle } from "../hooks/useTx";
+import { parseAmtSafe } from "../lib/format";
 import WalletShortcuts from "./WalletShortcuts";
 import { InfoTooltip } from "./ui/tooltip";
+import AmountInput from "./AmountInput";
 import Button from "./ui/Button";
-import Input from "./ui/Input";
 import { ExternalLink, RefreshCw } from "lucide-react";
 
-type Props = { tx: TxHandle; onWrap: (amt: string) => void };
+type Props = { tx: TxHandle; onWrap: (amt: string) => void; max: bigint | undefined };
 
-export default function WrapCard({ tx, onWrap, complete = false }: Props & { complete?: boolean }) {
-  const [amt, setAmt] = useState("0.001");
+export default function WrapCard({ tx, onWrap, max, complete = false }: Props & { complete?: boolean }) {
+  const [amt, setAmt] = useState("0");
+  const parsed = parseAmtSafe(amt);
+  const overMax = max !== undefined && parsed > max;
+  const empty = parsed <= 0n;
   const errRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -24,22 +28,18 @@ export default function WrapCard({ tx, onWrap, complete = false }: Props & { com
         <h2 className={complete ? "text-muted" : "text-foreground"}>Wrap BNB <InfoTooltip>Wrap mengubah BNB menjadi WBNB agar vault dapat menjalankan rescue.</InfoTooltip></h2>
       </div>
       <div className="mt-3 flex min-w-0 items-end gap-2 max-[380px]:grid max-[380px]:grid-cols-1 max-[380px]:items-stretch">
-        <Input
-          id="wrap-amount"
-          label="Jumlah BNB"
-          name="wrap-amount"
-          autoComplete="off"
-          spellCheck={false}
-          inputMode="decimal"
-          value={amt}
-          onChange={(e) => setAmt(e.target.value)}
-          placeholder="0.001…"
-        />
-        <Button type="button" className="gap-2 action-button" disabled={tx.isPending} onClick={() => onWrap(amt)}>
+        <AmountInput id="wrap-amount" label="Jumlah BNB" symbol="BNB" value={amt} onChange={setAmt} max={max} />
+        <Button type="button" className="gap-2 action-button" disabled={tx.isPending || empty || overMax} onClick={() => onWrap(amt)}>
           <RefreshCw aria-hidden="true" size={16} strokeWidth={1.8} />
           {tx.isPending ? "Memproses…" : complete ? "Sudah di-wrap" : "Wrap BNB"}
         </Button>
       </div>
+      {overMax && (
+        <p className="err">Nominal melebihi saldo BNB.</p>
+      )}
+      {!overMax && max !== undefined && max > 0n && parsed >= max && !empty && (
+        <p className="warn">Hati-hati: wrap 100% menghabiskan BNB untuk gas transaksi berikutnya.</p>
+      )}
       <div aria-live="polite">
         {tx.isPending && <WalletShortcuts />}
         {tx.hash && (

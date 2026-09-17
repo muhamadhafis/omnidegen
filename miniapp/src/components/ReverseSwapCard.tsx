@@ -1,14 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { useReadContract } from "wagmi";
-import { parseEther } from "viem";
 import { MUSDC, SCAN_TX, WBNB } from "../config";
 import { pancakeRouterAbi } from "../abi";
 import type { TxHandle } from "../hooks/useTx";
-import { fmtToken } from "../lib/format";
+import { fmtToken, parseAmtSafe } from "../lib/format";
 import WalletShortcuts from "./WalletShortcuts";
 import { InfoTooltip } from "./ui/tooltip";
+import AmountInput from "./AmountInput";
 import Button from "./ui/Button";
-import Input from "./ui/Input";
 import { ExternalLink, ArrowLeftRight, ShieldCheck } from "lucide-react";
 
 const SLIPPAGE_BPS = 200; // tetap 2%, konsisten dengan backend
@@ -18,22 +17,17 @@ type Props = {
   swap: TxHandle;
   router: `0x${string}` | undefined;
   allowance: bigint | undefined;
+  max: bigint | undefined;
   onApprove: (amt: string) => void;
   onSwap: (amt: string, minOut: bigint) => void;
 };
 
-function parseAmt(amt: string): bigint {
-  try {
-    return parseEther(amt);
-  } catch {
-    return 0n;
-  }
-}
-
-export default function ReverseSwapCard({ appr, swap, router, allowance, onApprove, onSwap }: Props) {
-  const [amt, setAmt] = useState("0.05");
+export default function ReverseSwapCard({ appr, swap, router, allowance, max, onApprove, onSwap }: Props) {
+  const [amt, setAmt] = useState("0");
   const errRef = useRef<HTMLParagraphElement>(null);
-  const parsed = parseAmt(amt);
+  const parsed = parseAmtSafe(amt);
+  const overMax = max !== undefined && parsed > max;
+  const empty = parsed <= 0n;
 
   const quote = useReadContract({
     address: router,
@@ -63,29 +57,22 @@ export default function ReverseSwapCard({ appr, swap, router, allowance, onAppro
         <h2 className="text-foreground">Tukar mUSDC ke WBNB <InfoTooltip>Swap balik via Pancake dengan slippage tetap 2%. Setujui dulu bila izin kurang.</InfoTooltip></h2>
       </div>
       <div className="mt-3 flex min-w-0 items-end gap-2 max-[380px]:grid max-[380px]:grid-cols-1 max-[380px]:items-stretch">
-        <Input
-          id="rswap-amount"
-          label="Jumlah mUSDC"
-          name="rswap-amount"
-          autoComplete="off"
-          spellCheck={false}
-          inputMode="decimal"
-          value={amt}
-          onChange={(e) => setAmt(e.target.value)}
-          placeholder="0.05…"
-        />
+        <AmountInput id="rswap-amount" label="Jumlah mUSDC" symbol="mUSDC" value={amt} onChange={setAmt} max={max} />
         {needsApprove ? (
-          <Button type="button" className="gap-2 action-button" disabled={busy || parsed <= 0n} onClick={() => onApprove(amt)}>
+          <Button type="button" className="gap-2 action-button" disabled={busy || empty} onClick={() => onApprove(amt)}>
             <ShieldCheck aria-hidden="true" size={16} strokeWidth={1.8} />
             {appr.isPending ? "Memproses…" : "Approve mUSDC"}
           </Button>
         ) : (
-          <Button type="button" className="gap-2 action-button" disabled={busy || parsed <= 0n || !router || out === undefined} onClick={() => minOut !== undefined && onSwap(amt, minOut)}>
+          <Button type="button" className="gap-2 action-button" disabled={busy || empty || overMax || !router || out === undefined} onClick={() => minOut !== undefined && onSwap(amt, minOut)}>
             <ArrowLeftRight aria-hidden="true" size={16} strokeWidth={1.8} />
             {swap.isPending ? "Memproses…" : "Tukar ke WBNB"}
           </Button>
         )}
       </div>
+      {overMax && (
+        <p className="err">Nominal melebihi saldo mUSDC.</p>
+      )}
       <div className="metric" aria-live="polite">
         <span className="label">Estimasi terima</span>
         <span className="value">{!router ? "…" : out === undefined ? (quote.isPending ? "Memuat…" : "—") : `${fmtToken(out)} WBNB (min. ${fmtToken(minOut!)})`}</span>

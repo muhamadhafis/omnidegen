@@ -370,14 +370,14 @@ export default function App() {
             )}
             <div className="setup-flow" aria-label="Setup rescue">
               <div className="flow-label">Rescue setup</div>
-              <WrapCard tx={wrap} onWrap={doWrap} complete={(wbnb.data ?? 0n) > 0n} />
-              <ApproveCard tx={appr} onApprove={doApprove} onRevoke={doRevoke} complete={(allow.data ?? 0n) > 0n} />
+              <WrapCard tx={wrap} onWrap={doWrap} max={bnb.data?.value} complete={(wbnb.data ?? 0n) > 0n} />
+              <ApproveCard tx={appr} onApprove={doApprove} onRevoke={doRevoke} max={wbnb.data as bigint | undefined} complete={(allow.data ?? 0n) > 0n} />
               <AlarmCard ready={readyTx} />
             </div>
             <div className="setup-flow" aria-label="Tukar balik">
               <div className="flow-label">Tukar balik</div>
-              <UnwrapCard tx={unwrap} onUnwrap={doUnwrap} complete={false} />
-              <ReverseSwapCard appr={rAppr} swap={rSwap} router={routerAddr} allowance={musdcAllow.data as bigint | undefined} onApprove={doApproveMusdc} onSwap={doReverseSwap} />
+              <UnwrapCard tx={unwrap} onUnwrap={doUnwrap} max={wbnb.data as bigint | undefined} complete={false} />
+              <ReverseSwapCard appr={rAppr} swap={rSwap} router={routerAddr} allowance={musdcAllow.data as bigint | undefined} max={musdc.data as bigint | undefined} onApprove={doApproveMusdc} onSwap={doReverseSwap} />
             </div>
             {tele && address && telegramInitData() && (
               <StrategyCard initData={telegramInitData()} />

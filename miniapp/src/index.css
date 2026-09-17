@@ -340,6 +340,21 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
+.amount-field {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.amount-meta {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 12px;
+}
+
 @media (max-width: 280px) {
   .wallet-header {
     align-items: flex-start;

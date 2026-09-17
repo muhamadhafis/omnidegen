@@ -1,25 +1,30 @@
 import { useEffect, useRef, useState } from "react";
 import { SCAN_TX } from "../config";
 import type { TxHandle } from "../hooks/useTx";
+import { parseAmtSafe } from "../lib/format";
 import WalletShortcuts from "./WalletShortcuts";
 import { InfoTooltip } from "./ui/tooltip";
+import AmountInput from "./AmountInput";
 import Button from "./ui/Button";
-import Input from "./ui/Input";
 import { ExternalLink, ShieldCheck, ShieldOff } from "lucide-react";
 
 type Props = {
   tx: TxHandle;
   onApprove: (cap: string) => void;
   onRevoke: () => void;
+  max: bigint | undefined;
 };
 
 function confirmRevoke(): Promise<boolean> {
   return Promise.resolve(window.confirm("Cabut izin vault? Rescue berhenti sampai approve lagi."));
 }
 
-export default function ApproveCard({ tx, onApprove, onRevoke, complete = false }: Props & { complete?: boolean }) {
-  const [cap, setCap] = useState("0.001");
+export default function ApproveCard({ tx, onApprove, onRevoke, max, complete = false }: Props & { complete?: boolean }) {
+  const [cap, setCap] = useState("0");
   const [asking, setAsking] = useState(false);
+  const parsed = parseAmtSafe(cap);
+  const overMax = max !== undefined && parsed > max;
+  const empty = parsed <= 0n;
   const errRef = useRef<HTMLParagraphElement>(null);
 
   useEffect(() => {
@@ -33,18 +38,8 @@ export default function ApproveCard({ tx, onApprove, onRevoke, complete = false 
         <h2 className={complete ? "text-muted" : "text-foreground"}>Approve Vault <InfoTooltip>Approve memberi vault izin terbatas untuk menarik WBNB saat alarm aktif. Izin dapat dicabut kapan saja.</InfoTooltip></h2>
       </div>
       <div className="mt-3 flex min-w-0 items-end gap-2 max-[440px]:grid max-[440px]:grid-cols-1 max-[440px]:items-stretch">
-        <Input
-          id="approve-cap"
-          label="Batas WBNB"
-          name="approve-cap"
-          autoComplete="off"
-          spellCheck={false}
-          inputMode="decimal"
-          value={cap}
-          onChange={(e) => setCap(e.target.value)}
-          placeholder="0.001…"
-        />
-        <Button type="button" className="gap-2 action-button" disabled={tx.isPending} onClick={() => onApprove(cap)}>
+        <AmountInput id="approve-cap" label="Batas WBNB" symbol="WBNB" value={cap} onChange={setCap} max={max} />
+        <Button type="button" className="gap-2 action-button" disabled={tx.isPending || empty || overMax} onClick={() => onApprove(cap)}>
           <ShieldCheck aria-hidden="true" size={16} strokeWidth={1.8} />
           {tx.isPending ? "Memproses…" : complete ? "Sudah di-approve" : "Approve Vault"}
         </Button>
@@ -67,6 +62,9 @@ export default function ApproveCard({ tx, onApprove, onRevoke, complete = false 
         </Button>
       </div>
       <div aria-live="polite">
+        {overMax && (
+          <p className="err">Nominal melebihi saldo WBNB.</p>
+        )}
         {tx.isPending && <WalletShortcuts />}
         {tx.hash && (
           <a className="tx" href={SCAN_TX(tx.hash)} target="_blank" rel="noreferrer">
