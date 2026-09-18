@@ -1,5 +1,7 @@
-import { db, saveUserWallet, getUserWallet, getActiveIntents, getRecentIntents, updateIntentStatus, cancelStaleIntents } from "./db";
+import { db, saveUserWallet, getUserWallet, getActiveIntents, getRecentIntents, recordWalletTx, getWalletTxs, verifyPendingTxs, updateIntentStatus, cancelStaleIntents } from "./db";
 import type { Database } from "bun:sqlite";
+import { createPublicClient, http } from "viem";
+import { bscTestnet } from "viem/chains";
 import { verifyTelegramInitData } from "./telegram-auth";
 
 const getAllowedOrigin = () => process.env.MINIAPP_ORIGIN ?? "";
@@ -37,6 +39,17 @@ function requireAuth(req: Request): string {
   const initData = req.headers.get("x-telegram-init-data") ?? "";
   if (!initData) throw new Error("missing initData");
   return verifyTelegramInitData(initData, process.env.TELEGRAM_BOT_TOKEN ?? "");
+}
+
+// cek receipt on-chain (best-effort): status final hanya dari chain, bukan klaim klien.
+async function liveReceipt(hash: string): Promise<{ status: string; from: string } | null> {
+  try {
+    const client = createPublicClient({ chain: bscTestnet, transport: http(process.env.RPC_URL) });
+    const r = await client.getTransactionReceipt({ hash: hash as `0x${string}` });
+    return { status: r.status, from: r.from };
+  } catch {
+    return null;
+  }
 }
 
 // conn di-inject agar test tak menyentuh DB produksi (default = db file).
@@ -88,6 +101,34 @@ export function createApiHandler(conn: Database = db) {
         const userId = requireAuth(req);
         const items = getRecentIntents(userId, 20, conn);
         log(`GET /api/history → 200 user=${userId} items=${items.length}`);
+        return Response.json({ items }, { headers: corsHeaders(origin) });
+      } catch (error) {
+        return Response.json({ error: error instanceof Error ? error.message : "unauthorized" }, { status: 401, headers: corsHeaders(origin) });
+      }
+    }
+
+    if (path === "/api/txs" && req.method === "POST") {
+      if (getAllowedOrigin() && origin !== getAllowedOrigin()) return Response.json({ error: "origin forbidden" }, { status: 403 });
+      try {
+        const body = await req.json() as { initData?: string; wallet?: string; kind?: string; amount?: string; token?: string; txHash?: string; status?: string };
+        const userId = verifyTelegramInitData(body.initData ?? "", process.env.TELEGRAM_BOT_TOKEN ?? "");
+        const id = recordWalletTx({ userId, userWallet: body.wallet ?? "", kind: body.kind ?? "", amount: body.amount ?? "0", token: body.token ?? "", txHash: body.txHash ?? "", status: body.status ?? "submitted" }, conn);
+        log(`POST /api/txs → 200 user=${userId} kind=${body.kind} hash=${(body.txHash ?? "").slice(0, 10)}…`);
+        verifyPendingTxs(conn, liveReceipt, 5).catch(() => {});
+        return Response.json({ ok: true, id }, { headers: corsHeaders(origin) });
+      } catch (error) {
+        return Response.json({ error: error instanceof Error ? error.message : "bad request" }, { status: 400, headers: corsHeaders(origin) });
+      }
+    }
+
+    if (path === "/api/txs" && req.method === "GET") {
+      try {
+        const userId = requireAuth(req);
+        const url_q = new URL(req.url).searchParams;
+        try {
+          await verifyPendingTxs(conn, liveReceipt, 10);
+        } catch { /* verifikasi gagal = lewati, data tetap dikembalikan */ }
+        const items = getWalletTxs(userId, Number(url_q.get("limit") ?? 20), conn);
         return Response.json({ items }, { headers: corsHeaders(origin) });
       } catch (error) {
         return Response.json({ error: error instanceof Error ? error.message : "unauthorized" }, { status: 401, headers: corsHeaders(origin) });

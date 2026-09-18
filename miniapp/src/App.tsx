@@ -10,11 +10,9 @@ import { dlog, getLogs, subscribeLogs, type LogEntry } from "./debug-log";
 import { openWalletApp } from "./wallets";
 import { useTx } from "./hooks/useTx";
 import StatusCard from "./components/StatusCard";
-import StrategyCard from "./components/StrategyCard";
-import WrapCard from "./components/WrapCard";
-import ApproveCard from "./components/ApproveCard";
-import UnwrapCard from "./components/UnwrapCard";
-import ReverseSwapCard from "./components/ReverseSwapCard";
+import TokenTabs from "./components/TokenTabs";
+import StrategiesPanel from "./components/StrategiesPanel";
+import PoolLiveCard from "./components/PoolLiveCard";
 import AlarmCard from "./components/AlarmCard";
 import Button from "./components/ui/Button";
 import Notice from "./components/ui/Notice";
@@ -129,6 +127,7 @@ export default function App() {
   const unwrap = useTx();
   const rAppr = useTx();
   const rSwap = useTx();
+  const revoke = useTx();
 
   useEffect(initTelegram, []);
 
@@ -147,13 +146,13 @@ export default function App() {
       allow.refetch();
       bnb.refetch();
     }
-    if (unwrap.isSuccess || rAppr.isSuccess || rSwap.isSuccess) {
+    if (unwrap.isSuccess || rAppr.isSuccess || rSwap.isSuccess || revoke.isSuccess) {
       wbnb.refetch();
       musdc.refetch();
       musdcAllow.refetch();
       bnb.refetch();
     }
-  }, [wrap.isSuccess, appr.isSuccess, unwrap.isSuccess, rAppr.isSuccess, rSwap.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [wrap.isSuccess, appr.isSuccess, unwrap.isSuccess, rAppr.isSuccess, rSwap.isSuccess, revoke.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const readyTx = (allow.data ?? 0n) > 0n && (wbnb.data ?? 0n) > 0n;
 
@@ -216,7 +215,7 @@ export default function App() {
     const deadline = BigInt(Math.floor(Date.now() / 1000) + 900);
     rSwap.writeContract({ address: routerAddr, abi: pancakeRouterAbi, functionName: "swapExactTokensForTokens", args: [parseEther(amt), minOut, [MUSDC, WBNB], address, deadline] });
   };
-  const doRevoke = () => appr.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "approve", args: [VAULT, 0n] });
+  const doRevoke = () => revoke.writeContract({ address: WBNB, abi: wbnbAbi, functionName: "approve", args: [VAULT, 0n] });
 
   // Logout harus memutus DUA sesi: konektor wagmi (yang menggerakkan `address`
   // dan seluruh UI) + sesi Privy. Tanpa disconnect, address bertahan dan UI
@@ -368,19 +367,34 @@ export default function App() {
                 </div>
               </Notice>
             )}
-            <div className="setup-flow" aria-label="Setup rescue">
-              <div className="flow-label">Rescue setup</div>
-              <WrapCard tx={wrap} onWrap={doWrap} max={bnb.data?.value} complete={(wbnb.data ?? 0n) > 0n} />
-              <ApproveCard tx={appr} onApprove={doApprove} onRevoke={doRevoke} max={wbnb.data as bigint | undefined} complete={(allow.data ?? 0n) > 0n} />
+            <div className="setup-flow" aria-label="Aksi token">
+              <div className="flow-label">Aksi token</div>
+              <TokenTabs
+                bnb={bnb.data?.value}
+                wbnb={wbnb.data as bigint | undefined}
+                musdc={musdc.data as bigint | undefined}
+                allowVault={allow.data as bigint | undefined}
+                allowRouter={musdcAllow.data as bigint | undefined}
+                router={routerAddr}
+                address={address}
+                wrap={wrap}
+                appr={appr}
+                unwrap={unwrap}
+                rAppr={rAppr}
+                rSwap={rSwap}
+                revoke={revoke}
+                onWrap={doWrap}
+                onApproveVault={doApprove}
+                onRevoke={doRevoke}
+                onUnwrap={doUnwrap}
+                onApproveMusdc={doApproveMusdc}
+                onReverseSwap={doReverseSwap}
+              />
+              <PoolLiveCard router={routerAddr} />
               <AlarmCard ready={readyTx} />
             </div>
-            <div className="setup-flow" aria-label="Tukar balik">
-              <div className="flow-label">Tukar balik</div>
-              <UnwrapCard tx={unwrap} onUnwrap={doUnwrap} max={wbnb.data as bigint | undefined} complete={false} />
-              <ReverseSwapCard appr={rAppr} swap={rSwap} router={routerAddr} allowance={musdcAllow.data as bigint | undefined} max={musdc.data as bigint | undefined} onApprove={doApproveMusdc} onSwap={doReverseSwap} />
-            </div>
             {tele && address && telegramInitData() && (
-              <StrategyCard initData={telegramInitData()} />
+              <StrategiesPanel initData={telegramInitData()} />
             )}
           </>
         )}

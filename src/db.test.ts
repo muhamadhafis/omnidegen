@@ -1,5 +1,5 @@
 import { describe, test, expect } from "bun:test";
-import { createDb, getActiveIntents, getLastIntent, getRecentIntents, getUserWallet, claimIntent, saveIntent, saveUserWallet, cancelStaleIntents, runMigrations, updateIntentProof } from "./db";
+import { createDb, getActiveIntents, getLastIntent, getRecentIntents, getUserWallet, getWalletTxs, claimIntent, saveIntent, saveUserWallet, cancelStaleIntents, runMigrations, updateIntentProof, recordWalletTx, verifyPendingTxs } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
 
@@ -67,6 +67,34 @@ describe("db", () => {
     const id = saveIntent({ userId: "1", userWallet: W, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 450 }, c);
     updateIntentProof(id, "0x" + "ab".repeat(32), c);
     expect((c.query("select tx_hash from intents where id=$id").get({ $id: id }) as any).tx_hash).toBe("0x" + "ab".repeat(32));
+  });
+  test("wallet_txs: record valid + tolak buruk + list per-user", () => {
+    const c = createDb();
+    const H = "0x" + "ab".repeat(32);
+    const id = recordWalletTx({ userId: "1", userWallet: W, kind: "wrap", amount: "0.001", token: "BNB", txHash: H, status: "success" }, c);
+    expect(id).toBeGreaterThan(0);
+    expect(() => recordWalletTx({ userId: "1", userWallet: W, kind: "hack", amount: "1", token: "X", txHash: H, status: "success" }, c)).toThrow("bad kind");
+    expect(() => recordWalletTx({ userId: "1", userWallet: W, kind: "wrap", amount: "1", token: "X", txHash: "0xbad", status: "success" }, c)).toThrow("bad hash");
+    expect(() => recordWalletTx({ userId: "1", userWallet: "bad", kind: "wrap", amount: "1", token: "X", txHash: H, status: "success" }, c)).toThrow("bad wallet");
+    expect(getWalletTxs("1", 20, c).length).toBe(1);
+    expect(getWalletTxs("2", 20, c).length).toBe(0);
+  });
+  test("verifyPendingTxs: success/failed/null/from-beda", async () => {
+    const c = createDb();
+    const mk = (suffix: string) => recordWalletTx({ userId: "1", userWallet: W, kind: "wrap", amount: "1", token: "BNB", txHash: "0x" + suffix.repeat(32), status: "submitted" }, c);
+    mk("aa"); mk("bb"); mk("cc"); mk("dd");
+    const stub = async (h: string) => {
+      if (h.includes("aa")) return { status: "success", from: W };
+      if (h.includes("bb")) return { status: "reverted", from: W };
+      if (h.includes("cc")) return { status: "success", from: "0x9999999999999999999999999999999999999999" };
+      return null;
+    };
+    expect(await verifyPendingTxs(c, stub, 10)).toBe(2);
+    const rows = getWalletTxs("1", 20, c);
+    expect(rows.find((r: any) => r.tx_hash.includes("aa"))?.status).toBe("success");
+    expect(rows.find((r: any) => r.tx_hash.includes("bb"))?.status).toBe("failed");
+    expect(rows.find((r: any) => r.tx_hash.includes("cc"))?.verified).toBe(0); // from beda: dilewati
+    expect(rows.find((r: any) => r.tx_hash.includes("dd"))?.status).toBe("submitted"); // receipt null: tetap
   });
   test("riwayat urut terbaru + batas limit + per-user", () => {
     const c = createDb();

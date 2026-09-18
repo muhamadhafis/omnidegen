@@ -43,6 +43,24 @@ describe("wallet linking API", () => {
     expect(getUserWallet("6577260927", conn)).toBe(WALLET);
   });
 
+  test("tx history: record valid + tolak buruk + baca perlu auth", async () => {
+    const handler = createApiHandler(conn);
+    const H = "0x" + "ab".repeat(32);
+    const base = { initData: signed(), wallet: WALLET, kind: "wrap", amount: "0.001", token: "BNB", txHash: H, status: "success" };
+    const post = (b: unknown) => handler(new Request("https://api.test/api/txs", { method: "POST", headers: { origin: "https://miniapp.example", "content-type": "application/json" }, body: JSON.stringify(b) }));
+    expect((await post(base)).status).toBe(200);
+    expect((await post({ ...base, kind: "hack" })).status).toBe(400);
+    expect((await post({ ...base, txHash: "0xbad" })).status).toBe(400);
+    expect((await post({ ...base, initData: "auth_date=1&hash=bad" })).status).toBe(400);
+    const get = await handler(new Request("https://api.test/api/txs?limit=20", { headers: { origin: "https://miniapp.example", "x-telegram-init-data": signed() } }));
+    expect(get.status).toBe(200);
+    const j: any = await get.json();
+    expect(j.items.length).toBe(1);
+    expect(j.items[0].kind).toBe("wrap");
+    const unauth = await handler(new Request("https://api.test/api/txs", { headers: { origin: "https://miniapp.example" } }));
+    expect(unauth.status).toBe(401);
+  });
+
   test("history mengembalikan intent user + tolak tanpa auth", async () => {
     const handler = createApiHandler(conn);
     saveIntent({ userId: "6577260927", userWallet: WALLET, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 400 }, conn);

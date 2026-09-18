@@ -33,6 +33,18 @@ const SCHEMA = `
     status TEXT DEFAULT 'active',
     tx_hash TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS wallet_txs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    user_wallet TEXT NOT NULL,
+    kind TEXT NOT NULL,
+    amount TEXT DEFAULT '0',
+    token TEXT DEFAULT '',
+    tx_hash TEXT NOT NULL,
+    status TEXT DEFAULT 'submitted',
+    verified INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `;
 
@@ -119,6 +131,50 @@ export function updateIntentProof(id: number, txHash: string, conn: Database = d
 
 export function getLastIntent(userId: string, conn: Database = db) {
   return conn.query(`SELECT * FROM intents WHERE user_id=$uid ORDER BY id DESC LIMIT 1`).get({ $uid: userId }) as any;
+}
+
+const TX_KINDS = ["wrap", "unwrap", "approve", "revoke", "swap"] as const;
+export type TxKind = (typeof TX_KINDS)[number];
+const TX_STATUS = ["submitted", "success", "failed"] as const;
+
+export function recordWalletTx(input: { userId: string; userWallet: string; kind: string; amount: string; token: string; txHash: string; status: string }, conn: Database = db): number {
+  if (!input.userId || !/^0x[0-9a-fA-F]{40}$/.test(input.userWallet)) throw new Error("bad wallet");
+  if (!(TX_KINDS as readonly string[]).includes(input.kind)) throw new Error("bad kind");
+  if (!/^0x[0-9a-fA-F]{64}$/.test(input.txHash)) throw new Error("bad hash");
+  const st = (TX_STATUS as readonly string[]).includes(input.status) ? input.status : "submitted";
+  const q = conn.query(`INSERT INTO wallet_txs (user_id, user_wallet, kind, amount, token, tx_hash, status)
+    VALUES ($uid, $wallet, $kind, $amount, $token, $hash, $st) RETURNING id as id`);
+  return (q.get({ $uid: input.userId, $wallet: input.userWallet.toLowerCase(), $kind: input.kind, $amount: String(input.amount).slice(0, 64), $token: String(input.token).slice(0, 12), $hash: input.txHash.toLowerCase(), $st: st }) as any).id as number;
+}
+
+export function getWalletTxs(userId: string, limit = 20, conn: Database = db) {
+  const n = Math.floor(Number(limit));
+  const lim = !(n >= 1) ? 20 : Math.min(n, 100);
+  return conn.query(`SELECT * FROM wallet_txs WHERE user_id=$uid ORDER BY id DESC LIMIT ${lim}`).all({ $uid: userId }) as any[];
+}
+
+// verifikasi tertunda: untuk baris unverified, cek receipt via fetcher injeksi
+// (testable, tanpa network di test). Kembalikan jumlah yang terverifikasi.
+export async function verifyPendingTxs(
+  conn: Database,
+  getReceipt: (hash: string) => Promise<{ status: string; from: string } | null>,
+  limit = 10,
+): Promise<number> {
+  const n = Math.floor(Number(limit));
+  const lim = !(n >= 1) ? 10 : Math.min(n, 50);
+  const rows = conn.query(`SELECT * FROM wallet_txs WHERE verified=0 ORDER BY id DESC LIMIT ${lim}`).all() as any[];
+  let done = 0;
+  for (const r of rows) {
+    try {
+      const rc = await getReceipt(r.tx_hash);
+      if (!rc) continue;
+      if (rc.from && rc.from.toLowerCase() !== String(r.user_wallet).toLowerCase()) continue; // bukan Tx dompet ini
+      const st = rc.status === "success" ? "success" : "failed";
+      conn.query(`UPDATE wallet_txs SET status=$s, verified=1 WHERE id=$id`).run({ $s: st, $id: r.id });
+      done++;
+    } catch { /* best-effort: coba lagi di kunjungan berikut */ }
+  }
+  return done;
 }
 
 // riwayat: N intent terakhir user (termasuk executed/failed/cancelled).
