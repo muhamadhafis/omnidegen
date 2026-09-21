@@ -9,7 +9,7 @@ Di `reportWalletTx`, setelah `sent.add(input.hash);` tambah:
 
 ```ts
     try {
-      window.dispatchEvent(new CustomEvent("omnidegen:tx", { detail: { hash: input.hash } }));
+      window.dispatchEvent(new CustomEvent("Omnidegen:tx", { detail: { hash: input.hash } }));
     } catch {
       /* non-browser: abaikan */
     }
@@ -30,9 +30,9 @@ Setelah effect mount (baris `}, [initData]); // eslint-disable-line...`), tambah
       if (t) clearTimeout(t);
       t = setTimeout(fetchAll, 15_000);
     };
-    window.addEventListener("omnidegen:tx", onTx);
+    window.addEventListener("Omnidegen:tx", onTx);
     return () => {
-      window.removeEventListener("omnidegen:tx", onTx);
+      window.removeEventListener("Omnidegen:tx", onTx);
       if (t) clearTimeout(t);
     };
   }, [initData]); // eslint-disable-line react-hooks/exhaustive-deps

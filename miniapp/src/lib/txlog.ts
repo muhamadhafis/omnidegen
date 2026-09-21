@@ -13,7 +13,7 @@ export function reportWalletTx(input: { wallet: string; kind: string; amt: strin
     if (!initData) return;
     sent.add(input.hash);
     try {
-      window.dispatchEvent(new CustomEvent("omnidegen:tx", { detail: { hash: input.hash } }));
+      window.dispatchEvent(new CustomEvent("Omnidegen:tx", { detail: { hash: input.hash } }));
     } catch {
       /* non-browser: abaikan */
     }

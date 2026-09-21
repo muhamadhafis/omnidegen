@@ -1,6 +1,7 @@
 import { fmtToken, formatAmt, parseAmtSafe, pctOf } from "../lib/format";
 import Input from "./ui/Input";
 import Slider from "./ui/slider";
+import Stack from "./ui/Stack";
 
 type Props = {
   id: string;
@@ -22,7 +23,7 @@ export default function AmountInput({ id, label, symbol, value, onChange, max }:
     onChange(p <= 0 ? "0" : formatAmt(pctOf(max, p)));
   };
   return (
-    <div className="amount-field">
+    <Stack className="flex-1" gap={2}>
       <Input
         id={id}
         label={label}
@@ -47,6 +48,6 @@ export default function AmountInput({ id, label, symbol, value, onChange, max }:
         aria-label={`${label} dalam persen`}
         thumbLabel={`${Math.round(pct)}%`}
       />
-    </div>
+    </Stack>
   );
 }

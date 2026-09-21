@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
-import { API_URL, apiHeaders, SCAN_TX } from "../config";
+import { API_URL, apiHeaders } from "../config";
 import { inTelegram, shortAddr } from "../telegram";
 import Button from "./ui/Button";
 import Surface from "./ui/Surface";
+import TxLink from "./ui/TxLink";
 import { X } from "lucide-react";
 
 type Strategy = {
@@ -43,15 +44,6 @@ const STATUS_CLASS: Record<string, string> = {
   failed: "tx-failed",
 };
 
-function TxLink({ hash }: { hash?: string | null }) {
-  if (!hash || !/^0x[0-9a-fA-F]{64}$/.test(hash)) return null;
-  return (
-    <a className="tx" href={SCAN_TX(hash)} target="_blank" rel="noreferrer">
-      Lihat Tx ↗
-    </a>
-  );
-}
-
 function StrategyItem({ s, onCancel }: { s: Strategy; onCancel?: (id: number) => void }) {
   return (
     <li className="strategy-item">
@@ -66,7 +58,7 @@ function StrategyItem({ s, onCancel }: { s: Strategy; onCancel?: (id: number) =>
       </div>
       {s.status === "active" && onCancel && (
         <Button
-          variant="ghost"
+          variant="destructive"
           onClick={() => onCancel(s.id)}
           aria-label={`Batalkan strategi ${s.id}`}
         >
@@ -151,9 +143,9 @@ export default function StrategiesPanel({ initData }: { initData: string }) {
       if (t) clearTimeout(t);
       t = setTimeout(fetchAll, 15_000);
     };
-    window.addEventListener("omnidegen:tx", onTx);
+    window.addEventListener("Omnidegen:tx", onTx);
     return () => {
-      window.removeEventListener("omnidegen:tx", onTx);
+      window.removeEventListener("Omnidegen:tx", onTx);
       if (t) clearTimeout(t);
     };
   }, [initData]); // eslint-disable-line react-hooks/exhaustive-deps

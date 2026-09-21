@@ -10,21 +10,25 @@
   --color-accent-foreground: var(--accent-text);
   --color-success: var(--green);
   --color-danger: var(--red);
+  --color-link: var(--link);
+  --color-line: var(--line);
+  --color-amberink: var(--amberink);
 }
 
 :root {
-  --bg: #0a0a0a;
-  --card: #111111;
-  --text: #ededed;
-  --muted: #888888;
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --text: #1c1c1e;
+  --muted: #636366;
   --accent: #f0b90b;
-  --accent-text: #111111;
-  --green: #3ddc84;
-  --red: #f6465d;
-  --border: #2a2a2a;
-  --radius: 8px;
-  --space: 10px;
-  color-scheme: dark;
+  --accent-text: #1c1c1e;
+  --green: #1a7f37;
+  --red: #d70015;
+  --border: #d1d1d6;
+  --line: #8e8e93;
+  --link: #005fcc;
+  --amberink: #8a6d00;
+  color-scheme: light;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
@@ -33,7 +37,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 body {
@@ -54,8 +58,9 @@ h2 {
 
 h1 {
   margin: 0;
-  font-size: 18px;
-  letter-spacing: -0.01em;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 h2 {
@@ -64,7 +69,9 @@ h2 {
   flex-wrap: wrap;
   gap: 6px;
   margin: 0 0 6px;
-  font-size: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 .skip {
@@ -85,9 +92,9 @@ h2 {
 }
 
 .badge {
-  border: 1px solid var(--accent);
+  border: 1px solid var(--amberink);
   border-radius: 6px;
-  color: var(--accent);
+  color: var(--amberink);
   padding: 3px 10px;
   font-size: 12px;
   white-space: nowrap;
@@ -112,6 +119,17 @@ h2 {
   padding-left: 12px;
 }
 
+.metric-tight {
+  padding: 3px 0;
+}
+
+.token-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+}
+
 .metric-with-help {
   border-top: 1px solid var(--border);
 }
@@ -129,11 +147,11 @@ h2 {
 .primary-balance strong {
   display: block;
   margin-top: 5px;
-  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-  font-size: clamp(25px, 8vw, 34px);
-  font-weight: 500;
-  letter-spacing: -0.06em;
-  line-height: 1;
+  font-weight: 700;
+  font-size: clamp(28px, 9vw, 36px);
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
 .primary-balance small {
@@ -165,7 +183,6 @@ code {
 
 .status-card {
   margin-bottom: 14px;
-  border-color: #363636;
   padding: 14px;
 }
 
@@ -205,31 +222,12 @@ code {
 }
 
 .readiness.is-ready {
-  border-color: rgba(61, 220, 132, 0.35);
-}
-
-.readiness-label {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  gap: 9px;
+  border-color: rgba(26, 127, 55, 0.4);
 }
 
 .readiness strong {
   display: block;
   font-size: 13px;
-}
-
-.readiness-dot {
-  width: 8px;
-  height: 8px;
-  flex: 0 0 8px;
-  border-radius: 50%;
-  background: var(--accent);
-}
-
-.readiness.is-ready .readiness-dot {
-  background: var(--green);
 }
 
 .icon {
@@ -240,6 +238,7 @@ code {
 
 .icon-button,
 .tooltip-trigger {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -254,17 +253,25 @@ code {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* hit area 44px, visual tetap 32px */
+.icon-button::before,
+.tooltip-trigger::before {
+  content: "";
+  position: absolute;
+  inset: -6px;
+}
+
 .icon-button:hover,
 .tooltip-trigger:hover,
 .tooltip-trigger[aria-expanded="true"] {
-  background: rgba(240, 185, 11, 0.12);
-  color: var(--accent);
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--text);
 }
 
 .icon-button:focus-visible,
 .tooltip-trigger:focus-visible,
 a:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--link);
   outline-offset: 2px;
 }
 
@@ -281,9 +288,10 @@ a:focus-visible {
 .tx {
   display: inline-flex;
   align-items: center;
+  min-height: 44px;
   gap: 4px;
   margin-top: 8px;
-  color: var(--accent);
+  color: var(--link);
   font-size: 13px;
   overflow-wrap: break-word;
 }
@@ -310,14 +318,14 @@ a:focus-visible {
 }
 
 .warn {
-  color: var(--accent);
+  color: var(--amberink);
 }
 
 .utility-link {
   display: inline-flex;
   align-items: center;
-  min-height: 36px;
-  color: var(--accent);
+  min-height: 44px;
+  color: var(--link);
   font-size: 13px;
   text-decoration: none;
 }
@@ -340,14 +348,6 @@ a:focus-visible {
   text-transform: uppercase;
 }
 
-.amount-field {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-  gap: 8px;
-}
-
 .amount-meta {
   display: flex;
   justify-content: space-between;
@@ -368,12 +368,20 @@ a:focus-visible {
   margin-bottom: 10px;
 }
 
+.token-tabs,
+.panel-tabs {
+  background: #e9e9ee;
+  border-radius: 18px;
+  padding: 8px;
+  box-shadow: inset 0px 0px 12px #ccc;
+}
+
 .tab-trigger {
   width: 100%;
   min-width: 0;
-  min-height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
   padding: 6px 10px;
   background: transparent;
   color: var(--muted);
@@ -386,14 +394,45 @@ a:focus-visible {
 }
 
 .tab-trigger[data-state="active"] {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: rgba(240, 185, 11, 0.08);
+  background: #ffffff;
+  color: #1c1c1e;
+  box-shadow: 0 0px 8px rgba(0, 0, 0, 0.12);
 }
 
 .tab-trigger:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--link);
   outline-offset: 2px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.chip {
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--link);
+  outline-offset: 2px;
+}
+
+.chip:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
 @media (max-width: 280px) {
@@ -409,18 +448,18 @@ a:focus-visible {
 }
 
 .link-status {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--amberink);
   background: rgba(240, 185, 11, 0.08);
 }
 
 .link-status.linked {
   border-left-color: var(--green);
-  background: rgba(61, 220, 132, 0.08);
+  background: rgba(26, 127, 55, 0.08);
 }
 
 .link-status.error {
   border-left-color: var(--red);
-  background: rgba(246, 70, 93, 0.08);
+  background: rgba(215, 0, 21, 0.08);
 }
 
 .status-row {
@@ -442,16 +481,16 @@ a:focus-visible {
 
 .link-status.linking .status-icon {
   background: rgba(240, 185, 11, 0.2);
-  color: var(--accent);
+  color: var(--amberink);
 }
 
 .link-status.linked .status-icon {
-  background: rgba(61, 220, 132, 0.2);
+  background: rgba(26, 127, 55, 0.2);
   color: var(--green);
 }
 
 .link-status.error .status-icon {
-  background: rgba(246, 70, 93, 0.2);
+  background: rgba(215, 0, 21, 0.2);
   color: var(--red);
 }
 
@@ -511,7 +550,7 @@ a:focus-visible {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--accent);
+  color: var(--amberink);
   font-weight: 600;
 }
 
@@ -530,22 +569,22 @@ a:focus-visible {
 }
 
 .strategy-status.active {
-  background: rgba(61, 220, 132, 0.15);
+  background: rgba(26, 127, 55, 0.15);
   color: var(--green);
 }
 
 .strategy-status.cancelled {
-  background: rgba(246, 70, 93, 0.15);
+  background: rgba(215, 0, 21, 0.15);
   color: var(--red);
 }
 
 .strategy-status.executed {
-  background: rgba(61, 220, 132, 0.15);
+  background: rgba(26, 127, 55, 0.15);
   color: var(--green);
 }
 
 .strategy-status.failed {
-  background: rgba(246, 70, 93, 0.15);
+  background: rgba(215, 0, 21, 0.15);
   color: var(--red);
 }
 
@@ -562,16 +601,16 @@ a:focus-visible {
 
 .tx-submitted {
   background: rgba(240, 185, 11, 0.15);
-  color: var(--accent);
+  color: var(--amberink);
 }
 
 .tx-success {
-  background: rgba(61, 220, 132, 0.15);
+  background: rgba(26, 127, 55, 0.15);
   color: var(--green);
 }
 
 .tx-failed {
-  background: rgba(246, 70, 93, 0.15);
+  background: rgba(215, 0, 21, 0.15);
   color: var(--red);
 }
 
@@ -581,6 +620,7 @@ a:focus-visible {
 }
 
 /* ponytail: debug sementara (?debug=1); hapus bersama panel debug */
+/* antislop: konsol debug SENGAJA selalu gelap (konvensi terminal), teks hijau terang */
 .debug-log {
   max-height: 220px;
   overflow: auto;
@@ -589,7 +629,7 @@ a:focus-visible {
   border-radius: 6px;
   padding: 8px;
   background: #000;
-  color: var(--green);
+  color: #4ade80;
   font-family: ui-monospace, Consolas, monospace;
   font-size: 11px;
   line-height: 1.5;

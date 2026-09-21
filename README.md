@@ -1,10 +1,10 @@
-# OmniDegen — Telegram Intent Hub & Auto-Hedging
+# Omnidegen — Telegram Intent Hub & Auto-Hedging
 
 Type a strategy in plain language on Telegram. AI watches the market 24/7 and
 hedges your assets on-chain when the trigger hits. One product, three tracks:
 **Consumer** (Telegram bot) · **AI Agents** (Groq parser + monitor) · **Finance** (OmniVault + real PancakeSwap swaps on BSC testnet).
 
-Live bot: https://t.me/omnidegen_bot
+Live bot: https://t.me/Omnidegen_bot
 
 ## How it works
 
@@ -85,7 +85,7 @@ src/            backend (Bun 1.4 + SQLite + Groq + viem, Telegram via stdlib fet
   web3.ts       relayer: reads vault balance, fires executeHedge
   bot.ts        Telegram long-polling, wallet onboarding, intent routing
 contracts/      Foundry: MockOracle + MockUSDC + OmniVault + Deploy script
-miniapp/        Vite+React+wagmi wallet companion (https://miniapp-omnidegen.vercel.app)
+miniapp/        Vite+React+wagmi wallet companion (https://miniapp-Omnidegen.vercel.app)
   Connect (WalletConnect) → Balances → Wrap → Approve/Revoke → back to chat
 ```
 Bot commands: `/start` (tombol 📱 Buka Dompet) · `/app` · `/info` · `/approve` · `/price` · `/crash` (admin)

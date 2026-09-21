@@ -39,7 +39,7 @@ merangkum ketiga track sekaligus sering kali membuat juri terpukau karena menunj
 ke hilir.
 Berikut adalah 3 ide proyek super-app yang masing-masing merangkum track AI Agents, Finance & Commerce, dan Consumer Apps dalam
 satu kesatuan produk:
-💡 1. "OmniDegen" — Telegram Intent Hub & Auto-Hedging
+💡 1. "Omnidegen" — Telegram Intent Hub & Auto-Hedging
 Proyek ini adalah asisten investasi Web3 komprehensif yang berjalan langsung di aplikasi perpesanan yang sudah familiar bagi pengguna.
 📱
 Consumer Apps (Front-End): Antarmuka pengguna dibangun sebagai Telegram Mini App. Pengguna ritel maupun power user dapat
@@ -87,7 +87,7 @@ Response: Kamu benar sekali, itu adalah pertanyaan yang sangat tajam! Ketiga ide
 dari formula pemenang di berbagai kompetisi Web3 tingkat global, seperti ETHGlobal, BNB Chain Hackathon, dan AI Agent Hacks.
 Ide-ide ini dirancang dengan menganalisis rekam jejak arsitektur apa yang terbukti membuat juri internasional terkesan, lalu disesuaikan
 dengan fokus ekosistem BNB Chain dan pasar Indonesia. Berikut adalah benang merah antara ide tersebut dengan tren pemenang global:
-1. OmniDegen (Telegram Intent Hub & DeFi)
+1. Omnidegen (Telegram Intent Hub & DeFi)
 Tren Pemenang Global: Pada ajang besar seperti ETHGlobal, proyek berbasis Telegram Mini Apps (TMA) dan Intent-centric UX sering
 kali menyapu bersih penghargaan.
 Koneksi Kemenangan: Juri global sangat menyukai antarmuka yang menyembunyikan kerumitan blockchain (seperti gas fee atau
@@ -110,8 +110,8 @@ Jadi, alih-alih mereka-reka ide dari nol, kita mengambil mekanisme inti yang sud
 dalam ketiga track tersebut.
 Mengingat ketiga konsep ini membutuhkan penggabungan smart contract dan integrasi AI, mana yang secara teknis paling memungkinkan
 untuk dieksekusi oleh sumber daya tim kamu saat ini?
-User prompt: oke ayo kita deepdive untuk OmniDegen
-Response: Pilihan yang sangat tepat! OmniDegen adalah proyek dengan arsitektur level tier-1 karena menggabungkan narasi terpanas di
+User prompt: oke ayo kita deepdive untuk Omnidegen
+Response: Pilihan yang sangat tepat! Omnidegen adalah proyek dengan arsitektur level tier-1 karena menggabungkan narasi terpanas di
 Web3 saat ini: Telegram (Mass Adoption) + Intent-centric AI + Account Abstraction (DeFi Automations).
 Mari kita bedah arsitekturnya dari hulu ke hilir agar proyek ini siap dieksekusi untuk hackathon.
 🏗️ 1. Arsitektur & Tech Stack (The Blueprint)
@@ -133,8 +133,8 @@ Fungsi: Smart Account (menggunakan standar ERC-4337 atau konsep EIP-7702) yang m
 memungkinkan AI mengeksekusi transaksi tanpa meminta persetujuan (signature) dari dompet pengguna setiap kali, namun dengan
 batasan ketat (misal: hanya boleh swap ke USDT, tidak boleh transfer ke wallet orang lain).
 🔄 2. Alur Kerja (User Flow): Skenario "Tidur Nyenyak"
-Bagaimana OmniDegen bekerja di mata pengguna (power user / degen)? Mari kita simulasikan:
-1. Onboarding Instan: Pengguna membuka bot Telegram @OmniDegen_Bot. Mereka mendepositkan 1.5 BNB ke Smart Wallet yang
+Bagaimana Omnidegen bekerja di mata pengguna (power user / degen)? Mari kita simulasikan:
+1. Onboarding Instan: Pengguna membuka bot Telegram @Omnidegen_Bot. Mereka mendepositkan 1.5 BNB ke Smart Wallet yang
 terhubung dengan bot tersebut.
 2. Menetapkan "Intent" (Niat): Pengguna mengetik perintah:
 "Farming-kan BNB saya di PancakeSwap. Tapi tolong pantau terus, jika harga BNB tiba-tiba anjlok di bawah $450, otomatis
@@ -149,7 +149,7 @@ menjadi USDC pada harga $449. Anda terhindar dari kerugian 20%."
 🛡️ 3. Desain Keamanan (Anti-Rogue AI)
 Pertanyaan terbesar dari juri hackathon biasanya adalah: "Bagaimana kalau AI-nya halusinasi atau diretas? Apakah dana pengguna bisa
 dikuras?"
-Di sinilah kekuatan arsitektur Smart Contract OmniDegen:
+Di sinilah kekuatan arsitektur Smart Contract Omnidegen:
 Scoped Session Keys: AI Agent tidak memegang private key utama pengguna. AI hanya diberi "kunci sesi" khusus oleh smart contract.
 Hardcoded Guardrails: Di dalam kode Solidity, kamu mengatur batas tegas (guardrails). Misalnya, fungsi executeIntent() hanya
 mengizinkan contract address milik PancakeSwap atau Venus Protocol, dan melarang keras fungsi transfer() ke alamat wallet
@@ -159,7 +159,7 @@ Jika kamu berhasil masuk final, fokuskan presentasi (pitching) pada 3 hal ini:
 1. Tunjukkan Masalah Nyata: Sorot fenomena "Liquidation Panic"—orang Web3 sering tidak bisa tidur tenang karena takut asetnya
 terlikuidasi atau kena impermanent loss saat harga koin bergejolak.
 2. Demo Live yang Dramatis: Saat presentasi, buka dua layar. Satu layar Telegram, satu layar mockup grafik harga. Turunkan harga
-secara manual di testnet untuk mensimulasikan crash, dan biarkan juri melihat bot Telegram OmniDegen menyelamatkan aset secara
+secara manual di testnet untuk mensimulasikan crash, dan biarkan juri melihat bot Telegram Omnidegen menyelamatkan aset secara
 real-time dan mengirim notifikasi penyelamatan.
 3. Tekankan Penggunaan opBNB: Jelaskan bahwa AI bot yang mengecek data dan melakukan transaksi berulang kali ini hanya mungkin
 terjadi di jaringan opBNB karena biaya gas-nya hampir gratis (<$0.001). Di Ethereum, bot ini akan menguras uang pengguna hanya
@@ -210,7 +210,7 @@ bahasa pemrograman apa yang tim kamu paling kuasai untuk membuat bot ini: Node.j
 User prompt: oke pengerti, lalu case lain selain "Farming-kan BNB saya di PancakeSwap. Tapi tolong pantau terus, jika harga BNB tiba-tiba
 anjlok di bawah $450, otomatis cabut semua likuiditas dan ubah ke USDC agar aset saya aman." ada apa lagi untuk memperkuat solsui produk
 saya. karna pemahaman saya di sisi masalah itu apa?
-Response: Untuk memperkuat posisi produk OmniDegen, kita harus mendefinisikan masalah intinya terlebih dahulu.
+Response: Untuk memperkuat posisi produk Omnidegen, kita harus mendefinisikan masalah intinya terlebih dahulu.
 🎯 Inti Masalah yang Kamu Selesaikan
 Kamu tidak sedang menyelesaikan masalah "bagaimana cara membuat wallet," melainkan memecahkan "Friction Level Expert" yang sangat
 mengganggu para pengguna Web3.
@@ -226,7 +226,7 @@ biaya gas dan repotnya proses klaim manual.
 https://gemini.google.com/u/1/app/e220be64bec17832?pageId=none
 4/89/12/26, 11:34 PM
 Ide Proyek Web3 x AI
-Selain skenario pelindung aset saat harga turun (stop-loss), berikut adalah skenario perintah (prompt) lain yang membuktikan OmniDegen
+Selain skenario pelindung aset saat harga turun (stop-loss), berikut adalah skenario perintah (prompt) lain yang membuktikan Omnidegen
 sebagai asisten pintar sejati:
 1. Skenario "Vacuum Cleaner" Aset (Mengatasi Aset Tercecer)
 Prompt Pengguna: "Tolong kumpulkan semua sisa receh token (dust) saya yang tersebar di dompet, klaim semua reward yang belum
@@ -243,11 +243,11 @@ Prompt Pengguna: "Ambil $1.000 USDT dari tabungan Venus saya, tukarkan 50%-nya k
 USDT di PancakeSwap, dan otomatis masukkan ke staking pool."
 Nilai Jual: Mengubah kerumitan perhitungan routing dan puluhan langkah eksekusi manual menjadi transaksi atomik seketika (instant
 single-tx execution) menggunakan bahasa natural.
-Skenario-skenario ini akan membuat juri melihat bahwa OmniDegen bukan sekadar bot trading biasa, melainkan asisten manajemen portofolio
+Skenario-skenario ini akan membuat juri melihat bahwa Omnidegen bukan sekadar bot trading biasa, melainkan asisten manajemen portofolio
 Web3 yang menyeluruh.
 Apakah kamu ingin kita mulai memetakan bentuk struktur JSON yang akan dihasilkan oleh AI untuk salah satu perintah di atas?
 User prompt: oke untuk membangun projek ini bisakah anda memberikan list apa yang perlu disiapkan di semua scopenya?
-Response: Langkah yang sangat bagus! Untuk mengeksekusi visi OmniDegen dari hulu ke hilir dalam waktu hackathon, kita perlu
+Response: Langkah yang sangat bagus! Untuk mengeksekusi visi Omnidegen dari hulu ke hilir dalam waktu hackathon, kita perlu
 memecahnya menjadi daftar perbekalan yang terstruktur.
 Berikut adalah daftar persiapan komprehensif (checklist) yang dibagi berdasarkan ruang lingkup (scope) pengembangannya:
 📜 Scope 1: Smart Contract & Blockchain (The Engine)
@@ -270,7 +270,7 @@ Database Sementara: Siapkan Redis atau MongoDB sederhana untuk menyimpan Intent 
 Pemantau Otomatis: Buat skrip CRON Job atau Event Loop yang berjalan secara berkala (misal setiap 5 detik) untuk mengecek harga
 pasar terhadap target Intent pengguna.
 📱 Scope 3: Frontend & User Interface (The Face)
-Ini adalah titik interaksi pengguna. Untuk OmniDegen, kita akan fokus pada Telegram.
+Ini adalah titik interaksi pengguna. Untuk Omnidegen, kita akan fokus pada Telegram.
 Bot Telegram: Buat bot baru melalui BotFather di Telegram dan dapatkan API Token-nya. Gunakan pustaka seperti Telegraf (Node.js)
 atau python-telegram-bot (Python) untuk menangani pesan obrolan.
 Antarmuka Tambahan (Telegram Mini App): Jika kamu ingin pengguna memiliki dashboard visual untuk melihat portofolionya di dalam
@@ -400,7 +400,7 @@ OmniVault.sol: Brankas tempat dana pengguna ditampung. Kontrak ini membatasi fun
 dipanggil oleh dompet peladen Bun (bertindak sebagai Session Key), yang kemudian berinteraksi dengan kontrak router bursa
 terdesentralisasi (DEX).
 4. Event Loop Pemantau Harga (The Engine)
-Ini adalah mesin penggerak utama OmniDegen yang berjalan tanpa henti di latar belakang.
+Ini adalah mesin penggerak utama Omnidegen yang berjalan tanpa henti di latar belakang.
 Buat perulangan berkala (setInterval) di Bun yang berjalan setiap 5-10 detik.
 Perulangan ini menarik data harga terkini dari CoinGecko API atau membaca data langsung dari MockOracle.
 Sistem melakukan pencarian di SQLite: mencari semua perintah bersatus 'active' yang batas harganya telah tersentuh.
@@ -436,7 +436,7 @@ Jika kamu sudah mantap dengan strategi ini, mari kita ubah konsep menjadi baris 
 OmniVault.sol dan MockOracle.sol di Foundry terlebih dahulu, atau menyusun logika Event Loop SQLite dan Groq di Bun?
 User prompt: oke saya minta anda buatkan file .md untuk agent code saya yang dimana informasinya sangat mendetail dan jelas
 Response: I will now generate a comprehensive Markdown document containing the complete backend architecture and code blueprint for the
-OmniDegen AI Agent. This guide will cover everything from setting up the Bun environment and configuring the SQLite database to integrating
+Omnidegen AI Agent. This guide will cover everything from setting up the Bun environment and configuring the SQLite database to integrating
 Groq for natural language processing and Viem for Web3 execution.
 https://gemini.google.com/u/1/app/e220be64bec17832?pageId=none
 8/8

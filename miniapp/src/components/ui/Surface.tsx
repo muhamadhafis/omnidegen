@@ -6,7 +6,7 @@ type Props = HTMLAttributes<HTMLElement> & {
 
 export default function Surface({ children, className = "", ...props }: Props) {
   return (
-    <section className={`min-w-0 rounded-lg border border-border bg-card p-3 ${className}`.trim()} {...props}>
+    <section className={`min-w-0 rounded-3xl border border-border bg-card p-3 ${className}`.trim()} {...props}>
       {children}
     </section>
   );

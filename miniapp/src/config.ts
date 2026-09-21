@@ -6,7 +6,7 @@ import { inTelegram } from "./telegram";
 export const WBNB = "0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd" as const;
 export const MUSDC = "0x5930d789bE286F3645BD6678fB8eD1c786c2CE36" as const;
 export const VAULT = "0x1B846fb2d2EB2FD83Da5680d0b63CcAee04511C4" as const;
-export const BOT_URL = "https://t.me/omnidegen_bot";
+export const BOT_URL = "https://t.me/Omnidegen_bot";
 export const FAUCET = "https://www.bnbchain.org/en/testnet-faucet";
 export const SCAN_TX = (h: string) => `https://testnet.bscscan.com/tx/${h}`;
 
@@ -39,7 +39,7 @@ export const privyConfig = {
   supportedChains: [bscTestnet],
   defaultChain: bscTestnet,
   appearance: {
-    theme: "dark" as const,
+    theme: "light" as const,
     ...(inTelegram()
       ? { walletList: ["metamask", "wallet_connect"] as ["metamask", "wallet_connect"] }
       : { walletList: ["metamask", "detected_ethereum_wallets", "wallet_connect"] as ["metamask", "detected_ethereum_wallets", "wallet_connect"] }),

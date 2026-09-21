@@ -37,7 +37,7 @@ export default function PoolLiveCard({ router }: { router: `0x${string}` | undef
   const spot = ready && rW > 0n ? Number(rM) / Number(rW) : 0;
 
   return (
-    <Surface className="status-card" aria-label="Kurs pool live">
+    <Surface className="status-card mt-4" aria-label="Kurs pool live">
       <div className="wallet-header">
         <div>
           <span className="eyebrow">WBNB/MUSDC</span>
@@ -45,9 +45,11 @@ export default function PoolLiveCard({ router }: { router: `0x${string}` | undef
           <InfoTooltip>Kurs pool Pancake (mUSDC ≈ $1), diperbarui tiap blok. Bukan harga trigger strategi.</InfoTooltip>
         </div>
       </div>
-      <div className="metric">
-        <span className="label">MUSDC/WBNB</span>
-        <span className="value">{!ready || spot <= 0 ? "…" : ratio6.format(1 / spot)}</span>
+      <div className="wallet-header">
+        <div>
+          <span className="eyebrow">MUSDC/WBNB</span>
+          <span className="value">{!ready || spot <= 0 ? "…" : `${ratio6.format(1 / spot)} WBNB`}</span>
+        </div>
       </div>
       <div className="metric">
         <span className="label">Blok</span>

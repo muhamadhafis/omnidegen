@@ -146,7 +146,7 @@ async function poll() {
           await sendMessage(uid, "Halo! Hubungkan dompet via Mini App, lalu kirim strategi. Cth: 'Kalau BNB di atas 500 maka TP'.", webAppKeyboard());
         } else if (msg.text === "/app") {
           const kb = webAppKeyboard();
-          await sendMessage(uid, kb ? "Buka dompet OmniDegen:" : "Mini App belum diset (MINIAPP_URL kosong).", kb);
+          await sendMessage(uid, kb ? "Buka dompet Omnidegen:" : "Mini App belum diset (MINIAPP_URL kosong).", kb);
         } else if (msg.text === "/info") {
           await reply(miniAppRedirect(), webAppKeyboard());
         } else if (msg.text === "/approve") {

@@ -1,5 +1,5 @@
 {
-  "name": "omnidegen-agent",
+  "name": "Omnidegen-agent",
   "module": "src/index.ts",
   "type": "module",
   "scripts": {

@@ -13,6 +13,7 @@ import StatusCard from "./components/StatusCard";
 import TokenTabs from "./components/TokenTabs";
 import StrategiesPanel from "./components/StrategiesPanel";
 import PoolLiveCard from "./components/PoolLiveCard";
+import Section from "./components/ui/Section";
 import AlarmCard from "./components/AlarmCard";
 import Button from "./components/ui/Button";
 import Notice from "./components/ui/Notice";
@@ -149,6 +150,7 @@ export default function App() {
     if (unwrap.isSuccess || rAppr.isSuccess || rSwap.isSuccess || revoke.isSuccess) {
       wbnb.refetch();
       musdc.refetch();
+      allow.refetch();
       musdcAllow.refetch();
       bnb.refetch();
     }
@@ -252,10 +254,10 @@ export default function App() {
       <div className="mx-auto w-full max-w-[440px] px-4 py-4 pb-[calc(32px+env(safe-area-inset-bottom))]">
         <a className="skip" href="#main">Lewati ke konten</a>
         <header className="mb-3 flex items-center justify-between">
-          <h1>OmniDegen</h1>
-          <span className="badge">Testnet</span>
+          <h1>Omnidegen</h1>
+          <span className=" bg-yellow-500 px-3 py-1 rounded-full text-xs">Testnet</span>
         </header>
-        <main id="main" className="mb-[var(--space)] min-w-0 rounded-lg border border-border bg-card p-3">
+        <main id="main" className="mb-3 min-w-0 rounded-lg border border-border bg-card p-3">
           <p>VITE_PRIVY_APP_ID belum diisi. Buat app di dashboard Privy lalu isi di file .env miniapp.</p>
         </main>
       </div>
@@ -266,8 +268,8 @@ export default function App() {
     <div className="mx-auto w-full max-w-[440px] px-4 py-4 pb-[calc(32px+env(safe-area-inset-bottom))]">
       <a className="skip" href="#main">Lewati ke konten</a>
       <header className="mb-3 flex items-center justify-between">
-        <h1>OmniDegen</h1>
-        <span className="badge">Testnet</span>
+        <h1>Omnidegen</h1>
+        <span className=" bg-yellow-500 px-3 py-1 rounded-full text-xs">Testnet</span>
       </header>
 
       <main id="main">
@@ -300,7 +302,7 @@ export default function App() {
             <p>Siapkan dompet…</p>
           </Notice>
         ) : !connected ? (
-          <Notice aria-label="Hubungkan dompet" className="gap-2">
+          <Notice aria-label="Hubungkan dompet" className="flex flex-col gap-4">
             {!tele && (
               <p className="muted">Aktifkan satu extension dompet (MetaMask ATAU Rabby) agar tidak konflik.</p>
             )}
@@ -367,8 +369,7 @@ export default function App() {
                 </div>
               </Notice>
             )}
-            <div className="setup-flow" aria-label="Aksi token">
-              <div className="flow-label">Aksi token</div>
+            <Section label="">
               <TokenTabs
                 bnb={bnb.data?.value}
                 wbnb={wbnb.data as bigint | undefined}
@@ -392,7 +393,7 @@ export default function App() {
               />
               <PoolLiveCard router={routerAddr} />
               <AlarmCard ready={readyTx} />
-            </div>
+            </Section>
             {tele && address && telegramInitData() && (
               <StrategiesPanel initData={telegramInitData()} />
             )}

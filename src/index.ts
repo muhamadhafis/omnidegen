@@ -2,7 +2,7 @@ import { bot } from "./bot";
 import { startPriceMonitor } from "./loop";
 import { startApi } from "./api";
 
-console.log("OmniDegen agent start...");
+console.log("Omnidegen agent start...");
 if ((process.env.TELEGRAM_BOT_TOKEN ?? "dummy") !== "dummy") {
   bot.launch().then(() => console.log("🤖 bot jalan"));
   process.once("SIGINT", () => bot.stop());

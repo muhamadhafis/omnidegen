@@ -1,11 +1,11 @@
-# 🚀 OmniDegen: AI Agent Backend (Bun + TypeScript)
+# 🚀 Omnidegen: AI Agent Backend (Bun + TypeScript)
 
-Dokumen ini berisi cetak biru (blueprint) kode untuk *backend* OmniDegen. Arsitektur ini dirancang agar sangat ringan, modular, dan memiliki latensi sangat rendah dengan memanfaatkan **Bun 1.4**, **Groq (LPU)**, dan **SQLite bawaan**.
+Dokumen ini berisi cetak biru (blueprint) kode untuk *backend* Omnidegen. Arsitektur ini dirancang agar sangat ringan, modular, dan memiliki latensi sangat rendah dengan memanfaatkan **Bun 1.4**, **Groq (LPU)**, dan **SQLite bawaan**.
 
 ## 📁 Struktur Direktori Proyek
 
 ```text
-omnidegen-agent/
+Omnidegen-agent/
 ├── .env                  # Environment variables
 ├── package.json          # Dependencies
 ├── src/
@@ -49,7 +49,7 @@ Kita menggunakan `bun:sqlite` bawaan yang tidak memerlukan instalasi tambahan. S
 import { Database } from "bun:sqlite";
 
 // Membuka atau membuat file database lokal
-export const db = new Database("omnidegen.sqlite", { create: true });
+export const db = new Database("Omnidegen.sqlite", { create: true });
 
 // Inisialisasi tabel Intents (Niat Pengguna)
 db.exec(`
@@ -206,7 +206,7 @@ import { saveIntent } from "./db";
 export const bot = new Telegraf(process.env.TELEGRAM_BOT_TOKEN!);
 
 bot.start((ctx) => {
-  ctx.reply("Halo! Saya OmniDegen bot. Apa yang ingin Anda lindungi hari ini?\n\nContoh: 'Jual BNB saya ke USDC kalau harga turun di bawah $450.'");
+  ctx.reply("Halo! Saya Omnidegen bot. Apa yang ingin Anda lindungi hari ini?\n\nContoh: 'Jual BNB saya ke USDC kalau harga turun di bawah $450.'");
 });
 
 bot.on("text", async (ctx) => {
@@ -273,7 +273,7 @@ export function startPriceMonitor() {
              // 3. Beritahu pengguna via Telegram
              bot.telegram.sendMessage(
                  intent.user_id, 
-                 `🚨 **PASAR ANJLOK!**\n\nTenang, OmniDegen telah menyelamatkan aset Anda ke ${intent.action_asset} di harga $${currentBNBPrice}.\n\nTx Hash: ${txHash}`
+                 `🚨 **PASAR ANJLOK!**\n\nTenang, Omnidegen telah menyelamatkan aset Anda ke ${intent.action_asset} di harga $${currentBNBPrice}.\n\nTx Hash: ${txHash}`
              );
           }
         }
@@ -293,7 +293,7 @@ File utama yang menyatukan semua komponen dan menjalankannya secara bersamaan.
 import { bot } from "./bot";
 import { startPriceMonitor, setMockPrice } from "./loop";
 
-console.log("Memulai OmniDegen Agent...");
+console.log("Memulai Omnidegen Agent...");
 
 // Menjalankan Bot Telegram
 bot.launch().then(() => {

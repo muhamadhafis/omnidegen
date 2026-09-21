@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { useReadContract } from "wagmi";
-import { MUSDC, SCAN_TX, WBNB } from "../config";
+import { MUSDC, WBNB } from "../config";
 import { pancakeRouterAbi } from "../abi";
 import type { TxHandle } from "../hooks/useTx";
 import { fmtToken8, parseAmtSafe } from "../lib/format";
@@ -9,9 +9,11 @@ import { reportWalletTx } from "../lib/txlog";
 import { dlog } from "../debug-log";
 import AmountInput from "./AmountInput";
 import WalletShortcuts from "./WalletShortcuts";
-import { InfoTooltip } from "./ui/tooltip";
 import Button from "./ui/Button";
-import { ExternalLink, ShieldOff } from "lucide-react";
+import SectionTitle from "./ui/SectionTitle";
+import Stack from "./ui/Stack";
+import TxLink from "./ui/TxLink";
+import { ShieldOff } from "lucide-react";
 
 type TabId = "wrap" | "approve" | "unwrap" | "swap";
 
@@ -49,7 +51,6 @@ type Props = {
 export default function TokenTabs(p: Props) {
   const [tab, setTab] = useState<TabId>("wrap");
   const [amt, setAmt] = useState("0");
-  const [asking, setAsking] = useState(false);
   const errRef = useRef<HTMLParagraphElement>(null);
 
   const parsed = parseAmtSafe(amt);
@@ -120,15 +121,6 @@ export default function TokenTabs(p: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.wrap.hash, p.appr.hash, p.unwrap.hash, p.rAppr.hash, p.rSwap.hash, p.revoke.hash, p.address]);
 
-  const confirmRevoke = async () => {
-    setAsking(true);
-    try {
-      if (window.confirm("Cabut izin vault? Rescue berhenti sampai approve lagi.")) p.onRevoke();
-    } finally {
-      setAsking(false);
-    }
-  };
-
   const primary = (() => {
     const common = "gap-2 action-button";
     if (tab === "wrap")
@@ -175,21 +167,21 @@ export default function TokenTabs(p: Props) {
             </Tabs.Trigger>
           ))}
         </Tabs.List>
-        <div className="mt-3 flex min-w-0 items-center gap-2.5">
-          <h2 className="text-foreground">{title} <InfoTooltip>{tip}</InfoTooltip></h2>
+        <div className="mt-4 flex min-w-0 items-center gap-3">
+          <SectionTitle tip={tip}>{title}</SectionTitle>
         </div>
-        <div className="mt-3">
+        <div className="mt-4">
           <AmountInput id={`token-${tab}-amount`} label={inputLabel} symbol={symbol} value={amt} onChange={setAmt} max={max} />
         </div>
-        <div className="mt-3 flex flex-col gap-2">
+        <Stack className="mt-4" gap={2}>
           {primary}
           {tab === "approve" && (
-            <Button type="button" variant="ghost" className="gap-2 action-button" disabled={p.revoke.isPending || asking} onClick={confirmRevoke}>
+            <Button type="button" variant="destructive" className="gap-2 action-button" disabled={p.revoke.isPending} onClick={() => p.onRevoke()}>
               <ShieldOff aria-hidden="true" size={16} strokeWidth={1.8} />
-              {asking ? "…" : "Cabut Izin"}
+              {p.revoke.isPending ? "Memproses…" : "Cabut Izin"}
             </Button>
           )}
-        </div>
+        </Stack>
       </Tabs.Root>
       <div aria-live="polite">
         {overMax && (
@@ -198,21 +190,17 @@ export default function TokenTabs(p: Props) {
         {tab === "wrap" && !overMax && max !== undefined && max > 0n && parsed >= max && !empty && (
           <p className="warn">Hati-hati: wrap 100% menghabiskan BNB untuk gas transaksi berikutnya.</p>
         )}
-        {tab === "swap" && (
+        {tab === "swap" && parsed > 0n && (
           <div className="metric">
             <span className="label">Estimasi terima</span>
-            <span className="value">{!p.router ? "…" : out === undefined ? (quote.isPending ? "Memuat…" : "—") : `${fmtToken8(out)} WBNB (min. ${fmtToken8(minOut!)})`}</span>
+            <span className="value">{!p.router ? "…" : out === undefined ? (quote.isFetching ? "Memuat…" : "—") : `${fmtToken8(out)} WBNB (min. ${fmtToken8(minOut!)})`}</span>
           </div>
         )}
         {tab === "swap" && quote.error && !quote.isPending && out === undefined && (
           <p className="err">Quote gagal dimuat. Cek koneksi lalu coba lagi.</p>
         )}
         {activeBusy && <WalletShortcuts />}
-        {activeHash && (
-          <a className="tx" href={SCAN_TX(activeHash)} target="_blank" rel="noreferrer">
-            Lihat Tx <ExternalLink aria-hidden="true" size={14} strokeWidth={1.8} />
-          </a>
-        )}
+        <TxLink hash={activeHash} />
         {activeErr && (
           <p ref={errRef} tabIndex={-1} className="err">
             Gagal: {activeErr.message.slice(0, 100)}. Cek saldo lalu coba lagi.

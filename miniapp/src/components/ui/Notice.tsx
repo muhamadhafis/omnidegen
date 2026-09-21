@@ -7,7 +7,7 @@ type Props = HTMLAttributes<HTMLElement> & {
 
 export default function Notice({ children, className = "", tone = "default", ...props }: Props) {
   return (
-    <section className={`mb-[var(--space)] min-w-0 rounded-lg border bg-card p-3 ${tone === "warning" ? "border-accent/55" : "border-border"} ${className}`.trim()} {...props}>
+    <section className={`mb-3 min-w-0 rounded-lg border bg-card p-3 ${tone === "warning" ? "border-amberink/60" : "border-border"} ${className}`.trim()} {...props}>
       {children}
     </section>
   );

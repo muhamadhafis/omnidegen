@@ -65,7 +65,7 @@ export function createDb(path = ":memory:") {
 }
 
 // ponytail: file sqlite, migrasi ke postgres kalau user >1k / concurrent write
-export const db = createDb(process.env.DB_PATH ?? "omnidegen.sqlite");
+export const db = createDb(process.env.DB_PATH ?? "Omnidegen.sqlite");
 
 export function saveUserWallet(telegramUserId: string, walletAddress: string, conn: Database = db) {
   if (!telegramUserId || !/^0x[0-9a-fA-F]{40}$/.test(walletAddress)) throw new Error("bad wallet");

@@ -9,6 +9,9 @@ export function initTelegram() {
   try {
     tg()?.ready();
     tg()?.expand();
+    // chrome Telegram selaras tema terang (aman bila API tak ada: catch)
+    tg()?.setHeaderColor?.("#F2F2F7");
+    tg()?.setBackgroundColor?.("#F2F2F7");
   } catch {
     /* bukan di Telegram: jalan sebagai web biasa */
   }

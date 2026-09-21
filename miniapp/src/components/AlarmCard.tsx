@@ -1,17 +1,17 @@
 import { MessageCircle } from "lucide-react";
 import { BOT_URL } from "../config";
 import { openBot } from "../telegram";
-import { InfoTooltip } from "./ui/tooltip";
 import Button from "./ui/Button";
+import SectionTitle from "./ui/SectionTitle";
+import Stack from "./ui/Stack";
 
 export default function AlarmCard({ ready }: { ready: boolean }) {
   return (
-    <section className={`min-w-0 border-b border-border py-[18px] last:border-b-0 ${ready ? "text-foreground" : "text-muted"}`} aria-label="Pasang alarm">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <span className="font-mono text-[11px] tracking-[0.08em] text-muted">03</span>
-        <h2>Alarm <InfoTooltip>Setelah siap, tulis strategi seperti “jual BNB ke USDC kalau turun di bawah 450” di bot.</InfoTooltip></h2>
+    <section className={`min-w-0 border-b border-border last:border-b-0 ${ready ? "text-foreground" : "text-muted"}`} aria-label="Pasang alarm">
+      <div className="flex min-w-0 items-center gap-3">
+        <SectionTitle tip="Setelah siap, tulis strategi seperti “jual BNB ke USDC kalau turun di bawah 450” di bot.">Alarm</SectionTitle>
       </div>
-      <div className="flex flex-col gap-2">
+      <Stack gap={2}>
         <Button
           className="gap-2"
           variant="primary"
@@ -24,7 +24,7 @@ export default function AlarmCard({ ready }: { ready: boolean }) {
           <MessageCircle aria-hidden="true" size={16} strokeWidth={1.8} />
           Buka Chat Bot
         </Button>
-      </div>
+      </Stack>
     </section>
   );
 }

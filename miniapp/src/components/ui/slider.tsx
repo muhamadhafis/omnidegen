@@ -20,18 +20,19 @@ export default function Slider({ className = "", thumbLabel, min = 0, max = 100,
       {thumbLabel !== undefined && (
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute top-0 rounded-md border border-border bg-card px-2 py-0.5 font-mono text-[11px] text-accent"
+          className="pointer-events-none absolute top-0 rounded-md border border-line bg-card px-2 py-0.5 font-sans text-gray-500 text-[11px]"
           style={{ left: `${pct}%`, transform: `translateX(-${pct}%)` }}
         >
           {thumbLabel}
         </span>
       )}
+      {/* antislop: range emas = satu aksen yang disengaja; nilai selalu ada sebagai teks % + input */}
       <SliderPrimitive.Track className="relative h-1.5 w-full grow overflow-hidden rounded-full bg-border">
         <SliderPrimitive.Range className="absolute h-full bg-accent" />
       </SliderPrimitive.Track>
       <SliderPrimitive.Thumb
         aria-label="Persentase jumlah"
-        className="block h-5 w-5 rounded-full border-2 border-accent bg-card shadow focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent disabled:pointer-events-none disabled:opacity-50"
+        className="relative block h-5 w-5 rounded-full border-2 border-amber-400 bg-card shadow before:absolute before:-inset-3 before:content-[''] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-link disabled:pointer-events-none disabled:opacity-50"
       />
     </SliderPrimitive.Root>
   );
