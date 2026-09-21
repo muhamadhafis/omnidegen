@@ -1,8 +1,10 @@
 # Omnidegen — Asisten Strategi Kripto di Telegram
 
-Kirim strategi pakai bahasa sehari-hari di Telegram. AI memantau harga 24/7 dan mengeksekusi otomatis on-chain saat trigger tersentuh.
+Omnidegen adalah tool untuk mengamankan aset kripto secara otomatis — seperti Grab untuk pesan ojek online, Omnidegen untuk pasang strategi stop-loss / take-profit lewat chat, lalu dieksekusi otomatis on-chain 24/7.
 
 Bot: https://t.me/omnidegen_bot
+
+![Mini App Omnidegen: dompet, aksi token, dan strategi](public/docs-1.png)
 
 ## Untuk pengguna: cara pakai (5 menit)
 
