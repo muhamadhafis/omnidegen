@@ -14,6 +14,12 @@ export function routeIntent(p: ParsedIntent): "monitor" | "execute_now" | "info"
 export const setWallet = (uid: string, w: string) => saveUserWallet(uid, w);
 export const getWallet = (uid: string) => getUserWallet(uid);
 
+// pure + testable: kata kerja beli terdeteksi SEBELUM LLM, agar kata arah
+// (turun/naik) tak pernah membalikkan aksi menjadi jual.
+export function isBuyRequest(text: string): boolean {
+  return /(beli|borong|buy|akumulasi|serok)/i.test(text.trim());
+}
+
 // konfirmasi eksekusi instan: uang beneran bergerak, wajib YA eksplisit
 const pending = new Map<string, ParsedIntent>();
 export const getPending = (uid: string) => pending.get(uid);
@@ -167,7 +173,14 @@ async function poll() {
           }
           setMockPrice(p);
           await reply(`📉 Harga diset $${p}. Pantau rescue...`);
-        } else await handleText(uid, msg.text, reply);
+        } else {
+          try {
+            await handleText(uid, msg.text, reply);
+          } catch (e) {
+            console.error("handleText gagal:", e instanceof Error ? e.message : e);
+            await reply("❌ Gagal memproses, coba kirim ulang perintahmu.");
+          }
+        }
       }
     } catch (e) {
       console.error("poll error:", (e as Error).message);

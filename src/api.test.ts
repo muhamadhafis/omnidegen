@@ -64,11 +64,15 @@ describe("wallet linking API", () => {
   test("history mengembalikan intent user + tolak tanpa auth", async () => {
     const handler = createApiHandler(conn);
     saveIntent({ userId: "6577260927", userWallet: WALLET, intentType: "stop_loss", asset: "BNB", target: "USDC", price: 400 }, conn);
+    saveIntent({ userId: "6577260927", userWallet: WALLET, intentType: "take_profit", asset: "BNB", target: "USDC", price: 500 }, conn);
     const res = await handler(new Request("https://api.test/api/history", { headers: { origin: "https://miniapp.example", "x-telegram-init-data": signed() } }));
     expect(res.status).toBe(200);
     const j: any = await res.json();
-    expect(j.items.length).toBe(1);
-    expect(j.items[0].intent_type).toBe("stop_loss");
+    expect(j.items.length).toBe(2);
+    expect(j.items[0].intent_type).toBe("take_profit"); // terbaru dulu
+    const limited = await handler(new Request("https://api.test/api/history?limit=1", { headers: { origin: "https://miniapp.example", "x-telegram-init-data": signed() } }));
+    const jl: any = await limited.json();
+    expect(jl.items.length).toBe(1);
     const unauth = await handler(new Request("https://api.test/api/history", { headers: { origin: "https://miniapp.example" } }));
     expect(unauth.status).toBe(401);
   });

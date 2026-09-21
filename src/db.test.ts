@@ -78,6 +78,9 @@ describe("db", () => {
     expect(() => recordWalletTx({ userId: "1", userWallet: "bad", kind: "wrap", amount: "1", token: "X", txHash: H, status: "success" }, c)).toThrow("bad wallet");
     expect(getWalletTxs("1", 20, c).length).toBe(1);
     expect(getWalletTxs("2", 20, c).length).toBe(0);
+    const id2 = recordWalletTx({ userId: "1", userWallet: W, kind: "wrap", amount: "0.001", token: "BNB", txHash: H, status: "success" }, c);
+    expect(id2).toBe(id); // hash sama = id sama, tak ada baris ganda
+    expect(getWalletTxs("1", 20, c).length).toBe(1);
   });
   test("verifyPendingTxs: success/failed/null/from-beda", async () => {
     const c = createDb();

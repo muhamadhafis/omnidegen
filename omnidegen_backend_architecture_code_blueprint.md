@@ -49,7 +49,7 @@ Kita menggunakan `bun:sqlite` bawaan yang tidak memerlukan instalasi tambahan. S
 import { Database } from "bun:sqlite";
 
 // Membuka atau membuat file database lokal
-export const db = new Database("Omnidegen.sqlite", { create: true });
+export const db = new Database("omnidegen.sqlite", { create: true });
 
 // Inisialisasi tabel Intents (Niat Pengguna)
 db.exec(`

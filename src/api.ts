@@ -99,7 +99,7 @@ export function createApiHandler(conn: Database = db) {
     if (path === "/api/history" && req.method === "GET") {
       try {
         const userId = requireAuth(req);
-        const items = getRecentIntents(userId, 20, conn);
+        const items = getRecentIntents(userId, Number(new URL(req.url).searchParams.get("limit") ?? 20), conn);
         log(`GET /api/history → 200 user=${userId} items=${items.length}`);
         return Response.json({ items }, { headers: corsHeaders(origin) });
       } catch (error) {

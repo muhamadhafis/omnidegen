@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { API_URL, apiHeaders } from "../config";
 import { inTelegram, shortAddr } from "../telegram";
+import { flushTxOutbox } from "../lib/txlog";
 import Button from "./ui/Button";
 import Surface from "./ui/Surface";
 import TxLink from "./ui/TxLink";
@@ -16,6 +17,7 @@ type Strategy = {
   status: string;
   user_wallet: string;
   tx_hash?: string | null;
+  created_at?: string;
 };
 
 type TxItem = {
@@ -53,6 +55,7 @@ function StrategyItem({ s, onCancel }: { s: Strategy; onCancel?: (id: number) =>
           {s.asset_to_monitor} → {s.action_asset} @ ${s.trigger_price}
         </span>
         <span className="strategy-detail">Dompet {shortAddr(s.user_wallet)}</span>
+        <span className="strategy-detail">{(s.created_at ?? "").slice(0, 16)}</span>
         <TxLink hash={s.tx_hash} />
         <span className={`strategy-status ${s.status}`}>{s.status}</span>
       </div>
@@ -108,7 +111,7 @@ export default function StrategiesPanel({ initData }: { initData: string }) {
       if (!res.ok) throw new Error("Gagal memuat strategi");
       const data = await res.json();
       setStrategies(data.intents ?? []);
-      const resH = await fetch(`${API_URL}/api/history`, {
+      const resH = await fetch(`${API_URL}/api/history?limit=100`, {
         headers: apiHeaders({ "x-telegram-init-data": initData }),
       });
       if (resH.ok) {
@@ -131,6 +134,7 @@ export default function StrategiesPanel({ initData }: { initData: string }) {
 
   useEffect(() => {
     fetchAll();
+    void flushTxOutbox(); // kirim ulang laporan Tx yang sempat gagal jaringan
   }, [initData]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // refresh otomatis saat Tx dompet baru dilaporkan (tokenTabs → txlog):

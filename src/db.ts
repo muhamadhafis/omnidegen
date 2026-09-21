@@ -65,7 +65,7 @@ export function createDb(path = ":memory:") {
 }
 
 // ponytail: file sqlite, migrasi ke postgres kalau user >1k / concurrent write
-export const db = createDb(process.env.DB_PATH ?? "Omnidegen.sqlite");
+export const db = createDb(process.env.DB_PATH ?? "omnidegen.sqlite");
 
 export function saveUserWallet(telegramUserId: string, walletAddress: string, conn: Database = db) {
   if (!telegramUserId || !/^0x[0-9a-fA-F]{40}$/.test(walletAddress)) throw new Error("bad wallet");
@@ -142,6 +142,8 @@ export function recordWalletTx(input: { userId: string; userWallet: string; kind
   if (!(TX_KINDS as readonly string[]).includes(input.kind)) throw new Error("bad kind");
   if (!/^0x[0-9a-fA-F]{64}$/.test(input.txHash)) throw new Error("bad hash");
   const st = (TX_STATUS as readonly string[]).includes(input.status) ? input.status : "submitted";
+  const dup = conn.query(`SELECT id FROM wallet_txs WHERE tx_hash=$h`).get({ $h: input.txHash.toLowerCase() }) as { id?: number } | null;
+  if (dup?.id) return dup.id; // idempoten: retry/flush ganda tak bikin baris ganda
   const q = conn.query(`INSERT INTO wallet_txs (user_id, user_wallet, kind, amount, token, tx_hash, status)
     VALUES ($uid, $wallet, $kind, $amount, $token, $hash, $st) RETURNING id as id`);
   return (q.get({ $uid: input.userId, $wallet: input.userWallet.toLowerCase(), $kind: input.kind, $amount: String(input.amount).slice(0, 64), $token: String(input.token).slice(0, 12), $hash: input.txHash.toLowerCase(), $st: st }) as any).id as number;

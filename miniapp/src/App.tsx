@@ -3,7 +3,7 @@ import { useAccount, useBalance, useDisconnect, useReadContract, useSwitchChain 
 import { useConnectWallet, usePrivy, useWallets } from "@privy-io/react-auth";
 import { useSetActiveWallet } from "@privy-io/wagmi";
 import { parseEther } from "viem";
-import { API_URL, apiHeaders, CHAIN, FAUCET, MUSDC, PRIVY_APP_ID, VAULT, WBNB } from "./config";
+import { API_URL, apiHeaders, CHAIN, MUSDC, PRIVY_APP_ID, VAULT, WBNB } from "./config";
 import { erc20Abi, pancakeRouterAbi, vaultRouterAbi, wbnbAbi } from "./abi";
 import { inTelegram, initTelegram, telegramInitData, tg } from "./telegram";
 import { dlog, getLogs, subscribeLogs, type LogEntry } from "./debug-log";
@@ -28,8 +28,6 @@ export default function App() {
   const { disconnect } = useDisconnect();
   const wrongNet = connected && chainId !== CHAIN.id;
 
-  const [linkStatus, setLinkStatus] = useState<"idle" | "linking" | "linked" | "error">("idle");
-  const [linkError, setLinkError] = useState<string | null>(null);
   const [connecting, setConnecting] = useState(false);
   const [connectError, setConnectError] = useState<string | null>(null);
   const connectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -161,8 +159,6 @@ export default function App() {
   useEffect(() => {
     const initData = telegramInitData();
     if (!API_URL || !address || !initData) return;
-    setLinkStatus("linking");
-    setLinkError(null);
     dlog(`link-wallet: POST ${API_URL}/api/link-wallet wallet=${address}`);
     fetch(`${API_URL}/api/link-wallet`, {
       method: "POST",
@@ -172,14 +168,10 @@ export default function App() {
       .then(async (res) => {
         dlog(`link-wallet: HTTP ${res.status}`);
         if (!res.ok) throw new Error(`Linking gagal (HTTP ${res.status})`);
-        setLinkStatus("linked");
         dlog("link-wallet: OK tersinkron");
       })
       .catch((e) => {
-        const m = e instanceof Error ? e.message : "Linking gagal";
-        dlog(`link-wallet: ERROR ${m}`);
-        setLinkStatus("error");
-        setLinkError(m);
+        dlog(`link-wallet: ERROR ${e instanceof Error ? e.message : "Linking gagal"}`);
       });
   }, [address]);
 
@@ -233,8 +225,6 @@ export default function App() {
     if (connectTimer.current) clearTimeout(connectTimer.current);
     setConnecting(false);
     setConnectError(null);
-    setLinkStatus("idle");
-    setLinkError(null);
     activatedRef.current = "";
     prevWallet.current = "";
     dlog("logout: state lokal direset");
@@ -340,35 +330,7 @@ export default function App() {
               onCopy={copyAddress}
               onLogout={handleLogout}
             />
-            {tele && (
-              <Notice aria-label="Isi saldo testnet">
-                <a className="utility-link" href={FAUCET} target="_blank" rel="noreferrer">
-                  Isi tBNB di faucet <span aria-hidden="true">→</span>
-                </a>
-              </Notice>
-            )}
-            {tele && (
-              <Notice
-                className={`link-status ${linkStatus}`}
-                aria-label="Status sinkronisasi wallet"
-                aria-live="polite"
-              >
-                <div className="status-row">
-                  <span className="status-icon">
-                    {linkStatus === "linking" && <span className="spinner" />}
-                    {linkStatus === "linked" && "✓"}
-                    {linkStatus === "error" && "✕"}
-                    {linkStatus === "idle" && "○"}
-                  </span>
-                  <span className="status-text">
-                    {linkStatus === "linking" && "Menghubungkan wallet ke bot…"}
-                    {linkStatus === "linked" && "Wallet tersinkron dengan bot"}
-                    {linkStatus === "error" && `Gagal sinkron: ${linkError}`}
-                    {linkStatus === "idle" && "Belum disinkronkan"}
-                  </span>
-                </div>
-              </Notice>
-            )}
+
             <Section label="">
               <TokenTabs
                 bnb={bnb.data?.value}

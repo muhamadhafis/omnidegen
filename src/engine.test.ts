@@ -1,7 +1,7 @@
 import { describe, test, expect } from "bun:test";
 import { shouldTrigger, tickOnce, failHint, isRealTxHash } from "./loop";
 import { applySlippage, checkPropagated, confirmTransaction, validateHedgeRequest } from "./web3";
-import { routeIntent, parseCrash, isAdmin, formatInfo, statusLine, approveText, webAppKeyboard, setPending, getPending, clearPending } from "./bot";
+import { routeIntent, parseCrash, isAdmin, formatInfo, statusLine, approveText, webAppKeyboard, setPending, getPending, clearPending, isBuyRequest } from "./bot";
 import { createDb, saveIntent, getActiveIntents, saveUserWallet, getUserWallet } from "./db";
 
 const W = "0x1234567890123456789012345678901234567890";
@@ -72,6 +72,14 @@ describe("engine", () => {
     const c = createDb(); // DB memori: test tak boleh menyentuh DB produksi
     saveUserWallet("u1", W, c);
     expect(getUserWallet("u1", c)).toBe(W);
+  });
+  test("permintaan beli ditolak sebelum LLM", () => {
+    expect(isBuyRequest("beli BNB kalau turun ke 100")).toBe(true);
+    expect(isBuyRequest("Borong mUSDC sekarang")).toBe(true);
+    expect(isBuyRequest("buy the dip")).toBe(true);
+    expect(isBuyRequest("jual BNB kalau turun ke 100")).toBe(false);
+    expect(isBuyRequest("kalau bnb turun ke $100 jual")).toBe(false);
+    expect(isBuyRequest("TP BNB ke 500")).toBe(false);
   });
   test("admin crash command", () => {
     expect(parseCrash("/crash 440")).toBe(440);

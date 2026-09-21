@@ -15,7 +15,7 @@ const groq = new Groq({ apiKey: process.env.GROQ_API_KEY ?? "dummy" });
 const SYSTEM = `Ekstrak perintah user jadi JSON murni tanpa markdown.
 Schema: {"type":"stop_loss"|"take_profit"|"vacuum"|"defi_batch"|"ask","asset":"BNB"|"USDC"|"USDT"|"DUST","target":"BNB"|"USDC","price":number,"amountPct":1-100}.
 stop_loss/take_profit target SELALU USDC (vault testnet hanya swap ke mUSDC; user sebut USDT/BUSD/DAI anggap USDC).
-turun/anjlok/jatuh->stop_loss, naik/profit->take_profit, receh/kumpulkan/claim->vacuum, TANYA saldo/aset/portofolio/info (berapa, cek, lihat, tampilkan saldo)->ask, sisanya multi-step->defi_batch. Default amountPct 100, price 0 jika tak ada.`;
+turun/anjlok/jatuh->stop_loss, naik/profit->take_profit, receh/kumpulkan/claim->vacuum, TANYA saldo/aset/portofolio/info (berapa, cek, lihat, tampilkan saldo)->ask, sisanya multi-step->defi_batch. Kata kerja aksi mengalahkan kata arah: beli/borong TIDAK PERNAH jadi stop_loss, vacuum, atau defi_batch. Default amountPct 100, price 0 jika tak ada.`;
 
 // pure + testable: normalisasi + validasi hasil LLM
 export function parseIntentJson(raw: string): ParsedIntent | null {
