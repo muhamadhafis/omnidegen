@@ -6,6 +6,12 @@ const numFmt = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 4 });
 export const fmtToken = (v: bigint | undefined) =>
   v === undefined ? "…" : numFmt.format(Number(formatEther(v)));
 
+const numFmt8 = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 8 });
+
+// presisi tinggi untuk estimasi quote kecil (fmtToken membulatkan <0,00005 jadi "0").
+export const fmtToken8 = (v: bigint | undefined) =>
+  v === undefined ? "…" : numFmt8.format(Number(formatEther(v)));
+
 export const fmtBnb = (v: bigint | undefined, decimals = 18) => {
   if (v === undefined) return "…";
   const raw = decimals === 18 ? Number(formatEther(v)) : Number(v) / 10 ** decimals;

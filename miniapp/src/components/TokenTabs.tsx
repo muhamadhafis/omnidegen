@@ -4,8 +4,9 @@ import { useReadContract } from "wagmi";
 import { MUSDC, SCAN_TX, WBNB } from "../config";
 import { pancakeRouterAbi } from "../abi";
 import type { TxHandle } from "../hooks/useTx";
-import { fmtToken, parseAmtSafe } from "../lib/format";
+import { fmtToken8, parseAmtSafe } from "../lib/format";
 import { reportWalletTx } from "../lib/txlog";
+import { dlog } from "../debug-log";
 import AmountInput from "./AmountInput";
 import WalletShortcuts from "./WalletShortcuts";
 import { InfoTooltip } from "./ui/tooltip";
@@ -81,6 +82,9 @@ export default function TokenTabs(p: Props) {
   useEffect(() => {
     if (p.rSwap.isSuccess) quote.refetch();
   }, [p.rSwap.isSuccess]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (quote.error) dlog(`quote gagal: ${(quote.error as Error).message.slice(0, 120)}`);
+  }, [quote.error]);
 
   const needsApprove = (p.allowRouter ?? 0n) < parsed;
   const busy = p.wrap.isPending || p.appr.isPending || p.unwrap.isPending || p.rAppr.isPending || p.rSwap.isPending || p.revoke.isPending;
@@ -197,8 +201,11 @@ export default function TokenTabs(p: Props) {
         {tab === "swap" && (
           <div className="metric">
             <span className="label">Estimasi terima</span>
-            <span className="value">{!p.router ? "…" : out === undefined ? (quote.isPending ? "Memuat…" : "—") : `${fmtToken(out)} WBNB (min. ${fmtToken(minOut!)})`}</span>
+            <span className="value">{!p.router ? "…" : out === undefined ? (quote.isPending ? "Memuat…" : "—") : `${fmtToken8(out)} WBNB (min. ${fmtToken8(minOut!)})`}</span>
           </div>
+        )}
+        {tab === "swap" && quote.error && !quote.isPending && out === undefined && (
+          <p className="err">Quote gagal dimuat. Cek koneksi lalu coba lagi.</p>
         )}
         {activeBusy && <WalletShortcuts />}
         {activeHash && (
