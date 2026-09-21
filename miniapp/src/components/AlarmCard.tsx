@@ -1,4 +1,4 @@
-import { MessageCircle } from "lucide-react";
+import { Bell, MessageCircle } from "lucide-react";
 import { BOT_URL } from "../config";
 import { openBot } from "../telegram";
 import Button from "./ui/Button";
@@ -9,7 +9,7 @@ export default function AlarmCard({ ready }: { ready: boolean }) {
   return (
     <section className={`min-w-0 border-b border-border last:border-b-0 ${ready ? "text-foreground" : "text-muted"}`} aria-label="Pasang alarm">
       <div className="flex min-w-0 items-center gap-3">
-        <SectionTitle tip="Setelah siap, tulis strategi seperti “jual BNB ke USDC kalau turun di bawah 450” di bot.">Alarm</SectionTitle>
+        <SectionTitle tip="Setelah siap, tulis strategi seperti “jual BNB ke USDC kalau turun di bawah 450” di bot."><Bell aria-hidden="true" size={16} strokeWidth={1.8} /><span className="sr-only">Alarm</span></SectionTitle>
       </div>
       <Stack gap={2}>
         <Button

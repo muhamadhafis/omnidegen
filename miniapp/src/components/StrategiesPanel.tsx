@@ -6,7 +6,7 @@ import { flushTxOutbox } from "../lib/txlog";
 import Button from "./ui/Button";
 import Surface from "./ui/Surface";
 import TxLink from "./ui/TxLink";
-import { X } from "lucide-react";
+import { Activity, History, Receipt, X } from "lucide-react";
 
 type Strategy = {
   id: number;
@@ -177,14 +177,17 @@ export default function StrategiesPanel({ initData }: { initData: string }) {
       {!loading && !error && (
         <Tabs.Root value={tab} onValueChange={(v) => setTab(v as PanelTab)}>
           <Tabs.List className="panel-tabs" aria-label="Strategi dan riwayat">
-            <Tabs.Trigger value="active" className="tab-trigger">
-              Aktif ({strategies.length})
+            <Tabs.Trigger value="active" className="tab-trigger" aria-label={`Aktif (${strategies.length})`} title="Aktif">
+              <Activity aria-hidden="true" size={18} strokeWidth={1.8} />
+              <span className="tab-count">({strategies.length})</span>
             </Tabs.Trigger>
-            <Tabs.Trigger value="history" className="tab-trigger">
-              Riwayat ({history.length})
+            <Tabs.Trigger value="history" className="tab-trigger" aria-label={`Riwayat (${history.length})`} title="Riwayat">
+              <History aria-hidden="true" size={18} strokeWidth={1.8} />
+              <span className="tab-count">({history.length})</span>
             </Tabs.Trigger>
-            <Tabs.Trigger value="txs" className="tab-trigger">
-              Transaksi ({txs.length})
+            <Tabs.Trigger value="txs" className="tab-trigger" aria-label={`Transaksi (${txs.length})`} title="Transaksi">
+              <Receipt aria-hidden="true" size={18} strokeWidth={1.8} />
+              <span className="tab-count">({txs.length})</span>
             </Tabs.Trigger>
           </Tabs.List>
           <Tabs.Content value="active">

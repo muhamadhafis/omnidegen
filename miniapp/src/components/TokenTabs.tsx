@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import * as Tabs from "@radix-ui/react-tabs";
 import { useReadContract } from "wagmi";
 import { MUSDC, WBNB } from "../config";
@@ -13,15 +13,17 @@ import Button from "./ui/Button";
 import SectionTitle from "./ui/SectionTitle";
 import Stack from "./ui/Stack";
 import TxLink from "./ui/TxLink";
-import { ShieldOff } from "lucide-react";
+import { ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, ShieldCheck, ShieldOff } from "lucide-react";
 
 type TabId = "wrap" | "approve" | "unwrap" | "swap";
 
-const TABS: { id: TabId; label: string; tip: string }[] = [
-  { id: "wrap", label: "Wrap BNB", tip: "Wrap mengubah BNB menjadi WBNB agar vault dapat menjalankan rescue." },
-  { id: "approve", label: "Approve Vault", tip: "Approve memberi vault izin terbatas untuk menarik WBNB saat alarm aktif. Izin dapat dicabut kapan saja." },
-  { id: "unwrap", label: "Unwrap WBNB", tip: "Unwrap mengubah WBNB kembali menjadi BNB native." },
-  { id: "swap", label: "Tukar mUSDC", tip: "Swap balik via Pancake dengan slippage tetap 2%. Setujui dulu bila izin kurang." },
+const iconProps = { "aria-hidden": true, size: 18, strokeWidth: 1.8 } as const;
+
+const TABS: { id: TabId; label: string; tip: string; icon: ReactNode }[] = [
+  { id: "wrap", label: "Wrap BNB", tip: "Wrap mengubah BNB menjadi WBNB agar vault dapat menjalankan rescue.", icon: <ArrowDownToLine {...iconProps} /> },
+  { id: "approve", label: "Approve Vault", tip: "Approve memberi vault izin terbatas untuk menarik WBNB saat alarm aktif. Izin dapat dicabut kapan saja.", icon: <ShieldCheck {...iconProps} /> },
+  { id: "unwrap", label: "Unwrap WBNB", tip: "Unwrap mengubah WBNB kembali menjadi BNB native.", icon: <ArrowUpFromLine {...iconProps} /> },
+  { id: "swap", label: "Tukar mUSDC", tip: "Swap balik via Pancake dengan slippage tetap 2%. Setujui dulu bila izin kurang.", icon: <ArrowLeftRight {...iconProps} /> },
 ];
 
 const SLIPPAGE_BPS = 200; // tetap 2%, konsisten dengan backend
@@ -162,8 +164,8 @@ export default function TokenTabs(p: Props) {
       <Tabs.Root value={tab} onValueChange={(v) => setTab(v as TabId)}>
         <Tabs.List className="token-tabs" aria-label="Fitur token">
           {TABS.map((t) => (
-            <Tabs.Trigger key={t.id} value={t.id} className="tab-trigger">
-              {t.label}
+            <Tabs.Trigger key={t.id} value={t.id} className="tab-trigger" aria-label={t.label} title={t.label}>
+              {t.icon}
             </Tabs.Trigger>
           ))}
         </Tabs.List>
