@@ -6,6 +6,60 @@ Bot: https://t.me/omnidegen_bot
 
 ![Mini App Omnidegen: dompet, aksi token, dan strategi](public/docs-1.png)
 
+## Arsitektur Infrastruktur (Infrastructure)
+
+```mermaid
+flowchart TD
+    subgraph Clients["Pengguna / Client Layer"]
+        TG["Telegram Mobile / Desktop App"]
+        MA["React MiniApp (Vite + Wagmi/Privy)"]
+        LP["Landing Page (Vite + WebGL GradientWaves)"]
+    end
+
+    subgraph Tunnel["Network & Proxy Layer"]
+        ZR["zrok Tunnel Public Proxy"]
+        TGA["Telegram Bot API"]
+    end
+
+    subgraph Backend["Backend Service (Bun Server)"]
+        API["Hono REST API (Port 8787)"]
+        BOT["Telegram Bot Polling (bot.ts)"]
+        AI["Groq LLM Intent Parser (ai.ts)"]
+        MON["Price Monitor Loop (loop.ts - 5s)"]
+        W3["Web3 Relayer Engine (web3.ts)"]
+        DB[("SQLite Database (Omnidegen.sqlite)")]
+    end
+
+    subgraph Blockchain["BNB Chain Testnet (Chain ID 97)"]
+        RPC["Multi-Node RPC (Alchemy / PublicNode)"]
+        VAULT["OmniVaultV2 Contract (0x1B84...11C4)"]
+        PANCAKE["PancakeSwap V2 Router (0xD99D...550D)"]
+        WBNB["WBNB Contract (0xae13...7cd)"]
+        MUSDC["mUSDC Contract (0x5930...CE36)"]
+    end
+
+    %% Flow Connections
+    TG -->|"Kirim Pesan Chat"| TGA
+    TGA -->|"Webhook / Long Poll"| BOT
+    BOT -->|"Extract Intent"| AI
+    BOT -->|"Simpan Strategi"| DB
+
+    TG -->|"Buka MiniApp Webview"| MA
+    MA -->|"HTTP POST /api/link-wallet & /api/txs"| ZR
+    ZR -->|"Bypass Header"| API
+    API -->|"CRUD Users, Intents & Txs"| DB
+
+    MON -->|"Cek Strategi Aktif"| DB
+    MON -->|"Fetch Live Price"| RPC
+    MON -->|"Trigger Rescue"| W3
+
+    W3 -->|"Execute executeHedgePull Tx"| VAULT
+    VAULT -->|"Swap WBNB -> mUSDC"| PANCAKE
+    PANCAKE -->|Transfer Asset| MUSDC
+    W3 -->|"Simpan Receipt Hash"| DB
+    W3 -->|"Notifikasi Hasil"| TGA
+```
+
 ## Untuk pengguna: cara pakai (5 menit)
 
 **1. Hubungkan dompet.** Buka bot → `/start` → Buka Mini App → Hubungkan Dompet (MetaMask atau Rabby). Bot mengenali dompetmu otomatis, tanpa tempel alamat manual.
@@ -45,10 +99,11 @@ bunx tsc --noEmit -p tsconfig.json
 forge test --root contracts        # kontrak: unit + fork
 bun run src/index.ts               # bot + monitor + API
 cd miniapp && bun run build        # tsc + lint + build Mini App
+cd landing-page && bun run build   # tsc + build Landing Page
 ```
 
 Bot: `/start` `/app` · `/info` & `/approve` redirect ke Mini App · natural language + konfirmasi YA untuk aksi instan · `/price` · `/crash` (admin).
 
-**Struktur**: `src/` (api, bot, loop, web3, db, ai, telegram-auth) · `contracts/` (Foundry, OmniVaultV2 pull-model) · `miniapp/` (TokenTabs, StrategiesPanel 3-tab, PoolLiveCard, ui reuse, debug `?debug=1`).
+**Struktur**: `src/` (api, bot, loop, web3, db, ai, telegram-auth) · `contracts/` (Foundry, OmniVaultV2 pull-model) · `miniapp/` (TokenTabs, StrategiesPanel 3-tab, PoolLiveCard, ui reuse, debug `?debug=1`) · `landing-page/` (Vite + React + WebGL GradientWaves).
 
 **Catatan produksi**: SQLite file → Postgres saat besar; single relayer key → session key; testnet-only (mUSDC mock, pool tipis).
