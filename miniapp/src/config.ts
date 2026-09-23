@@ -1,5 +1,5 @@
 import { createConfig } from "@privy-io/wagmi";
-import { http } from "wagmi";
+import { http, fallback } from "wagmi";
 import { bscTestnet } from "viem/chains";
 import { inTelegram } from "./telegram";
 
@@ -9,6 +9,8 @@ export const VAULT = "0x1B846fb2d2EB2FD83Da5680d0b63CcAee04511C4" as const;
 export const BOT_URL = "https://t.me/Omnidegen_bot";
 export const FAUCET = "https://www.bnbchain.org/en/testnet-faucet";
 export const SCAN_TX = (h: string) => `https://testnet.bscscan.com/tx/${h}`;
+
+export const RPC_URL = import.meta.env.VITE_RPC_URL ?? "https://bnb-testnet.g.alchemy.com/v2/mizf9D18M3qQqOUwjdXOt";
 
 export const CHAIN = bscTestnet;
 export const PRIVY_APP_ID = import.meta.env.VITE_PRIVY_APP_ID ?? "";
@@ -25,7 +27,16 @@ const WC_PROJECT_ID = import.meta.env.VITE_WC_PROJECT_ID ?? "";
 
 export const wagmiConfig = createConfig({
   chains: [bscTestnet],
-  transports: { [bscTestnet.id]: http() },
+  transports: {
+    [bscTestnet.id]: fallback([
+      http(RPC_URL),
+      http("https://bsc-testnet-rpc.publicnode.com"),
+      http("https://bsc-testnet-dataseed.bnbchain.org"),
+      http("https://bsc-testnet.bnbchain.org"),
+      http("https://bsc-prebsc-dataseed.bnbchain.org"),
+      http("https://data-seed-prebsc-1-s2.binance.org:8545"),
+    ]),
+  },
 });
 
 export const privyConfig = {
